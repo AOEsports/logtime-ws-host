@@ -1,0 +1,36 @@
+<head>
+	<title>Home</title>
+	<script>
+		function submitForm(e) {
+			// submit form to the /submit endpoint
+			console.log(`submittin`)
+			e.preventDefault();
+			fetch('/submit', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					workshop: document.getElementById('workshop').value
+				})
+			}).then(res => res.text()).then((text) => {
+				console.log(text)
+				if (text === "false") {
+					alert('invalid directory')
+				}
+			})
+			
+
+		}
+	</script>
+</head>
+<body>
+	<form style="display: flex; flex-direction: column; gap: 4px; padding: 2px;" >
+	
+		<label for="workshop">Direct Path to your \Documents\Overwatch\Workshop folder</label>
+		<input id="workshop" name="workshop" type="text" placeholder="C:\Documents\Overwatch\Workshop" value="C:\Documents\Overwatch\Workshop"/>
+		<button type="submit"
+			onclick="submitForm(event)"
+		>Update</button>
+	</form>
+</body>
