@@ -1,5 +1,7 @@
 import { ServerWebSocket } from "bun";
+import { renderToReadableStream } from "react-dom/server";
 import { createDTO, scrimCsvToObjArray } from "./parser";
+import Index from "./server/pages/index";
 
 let CURRENT: {
 	fileName: string;
@@ -16,6 +18,13 @@ let GameClientWS: ServerWebSocket<any> | null = null;
 let ReceivingDataConnections: ServerWebSocket<any>[] = [];
 
 const server = Bun.serve({
+	development: true,
+	async error(req, error) {
+		console.error(error);
+		return new Response(error.message, {
+			status: 500,
+		});
+	},
 	async fetch(req, server) {
 		// generate a random string
 		const success = server.upgrade(req);
@@ -34,7 +43,9 @@ const server = Bun.serve({
 		}
 
 		// handle HTTP request normally
-		return new Response(Bun.file("./src/public/index.html"));
+		return new Response(Bun.file("./src/public/index.html"), {
+			headers: { "Content-Type": "text/html" },
+		});
 	},
 	websocket: {
 		// this is called when a message is received
@@ -154,4 +165,4 @@ const server = Bun.serve({
 	},
 });
 
-console.log(`Listening on ${server.hostname}:${server.port}`);
+console.log(`Server started on port ${server.port}`);

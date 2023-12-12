@@ -1,0 +1,11 @@
+body,
+.mui-panel {
+	background-color: #202124;
+	color: white;
+}
+.mui-appbar {
+	background-color: #de6f2b !important;
+}
+a {
+	color: white !important;
+}
