@@ -35,7 +35,12 @@ const server = Bun.serve({
 		}
 		const header = Bun.file("./src/public/head.html");
 		const headerText = await header.text();
-		if (url.hostname == "/player") {
+		if (url.pathname == "/player") {
+			const players = await Bun.file("./src/public/player.html").text();
+			const returnPage = headerText.replace("%BODY%", players);
+			return new Response(returnPage, {
+				headers: { "Content-Type": "text/html" },
+			});
 		}
 
 		// return html with head.html and body.html
