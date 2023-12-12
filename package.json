@@ -1,25 +1,26 @@
 {
-	"name": "logtime-ws-host",
-	"module": "index.ts",
-	"type": "module",
-	"devDependencies": {
-		"bun-types": "latest"
-	},
-	"peerDependencies": {
-		"typescript": "^5.0.0"
-	},
-	"scripts": {
-		"startserver": "bun run src/server.ts",
-		"startclient": "node src/client.js"
-	},
-	"dependencies": {
-		"@elysiajs/static": "^0.7.1",
-		"elysia": "^0.7.30",
-		"express": "^4.18.2",
-		"fs": "^0.0.1-security",
-		"path": "^0.12.7",
-		"ts-node": "^10.9.2",
-		"underscore": "^1.13.6",
-		"ws": "^8.15.0"
-	}
+  "name": "logtime-ws-host",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "startserver": "bun run src/server.ts",
+    "startclient": "node src/client.js"
+  },
+  "dependencies": {
+    "@elysiajs/static": "^0.7.1",
+    "elysia": "^0.7.30",
+    "express": "^4.18.2",
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7",
+    "react": "^18.2.0",
+    "ts-node": "^10.9.2",
+    "underscore": "^1.13.6",
+    "ws": "^8.15.0"
+  }
 }

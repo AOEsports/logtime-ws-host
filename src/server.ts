@@ -1,6 +1,5 @@
 import { ServerWebSocket } from "bun";
 import { createDTO, scrimCsvToObjArray } from "./parser";
-import { parse } from "url";
 
 let CURRENT: {
 	fileName: string;
@@ -10,9 +9,11 @@ let CURRENT: {
 	lines: [],
 };
 
+let LAST_DATA_SENT: any = {};
+
 // Key WebSocket Map
 let GameClientWS: ServerWebSocket<any> | null = null;
-let RecievingDataConnections: ServerWebSocket<any>[] = [];
+let ReceivingDataConnections: ServerWebSocket<any>[] = [];
 
 const server = Bun.serve({
 	async fetch(req, server) {
@@ -24,8 +25,17 @@ const server = Bun.serve({
 			return undefined;
 		}
 
+		if (req.url.endsWith("/favicon.png")) {
+			return new Response(Bun.file("./src/publicserver/favicon.png"));
+		}
+		console.log(req.url);
+		if (req.url.includes("/public/")) {
+			const fileName = req.url.split("/public/")[1];
+			return new Response(Bun.file("./src/public/" + fileName));
+		}
+
 		// handle HTTP request normally
-		return new Response("Hello world!");
+		return new Response(Bun.file("./src/publicserver/index.html"));
 	},
 	websocket: {
 		// this is called when a message is received
@@ -36,8 +46,8 @@ const server = Bun.serve({
 				GameClientWS = null;
 				console.log(`GameClient disconnected`);
 			}
-			if (RecievingDataConnections.includes(ws)) {
-				RecievingDataConnections = RecievingDataConnections.filter(
+			if (ReceivingDataConnections.includes(ws)) {
+				ReceivingDataConnections = ReceivingDataConnections.filter(
 					(connection) => connection != ws
 				);
 				console.log(`Data connection disconnected`);
@@ -45,6 +55,10 @@ const server = Bun.serve({
 		},
 		async message(ws, message: string) {
 			const parsed = JSON.parse(message);
+			if (parsed.type == "ping") {
+				ws.send(JSON.stringify({ type: "pong" }));
+				return;
+			}
 			if (parsed.type == "init") {
 				// get the ip of the client
 				const ip = ws.remoteAddress;
@@ -53,9 +67,14 @@ const server = Bun.serve({
 					console.log(`Registered gameclient from IP`, ip);
 				}
 				if (parsed.id == "data") {
-					RecievingDataConnections.push(ws);
+					ReceivingDataConnections.push(ws);
 					console.log(`Registered data connection from IP`, ip);
 				}
+				console.log(
+					`Total connections:`,
+					ReceivingDataConnections.length
+				);
+				ws.send(JSON.stringify(LAST_DATA_SENT));
 			}
 			if (ws == GameClientWS) {
 				if (parsed.reset) {
@@ -63,21 +82,19 @@ const server = Bun.serve({
 						fileName: "",
 						lines: [],
 					};
-					for (const dataConnection of RecievingDataConnections) {
-						dataConnection.send(
-							JSON.stringify({
-								type: "data",
-								data: {},
-								parser_load: {
-									totalConnections:
-										RecievingDataConnections.length,
-									lineCount: 0,
-									fileName: "RESETTING",
-									ramUsage: process.memoryUsage().heapUsed,
-									cpuUsage: process.cpuUsage(),
-								},
-							})
-						);
+					LAST_DATA_SENT = {
+						type: "data",
+						data: {},
+						parser_load: {
+							totalConnections: ReceivingDataConnections.length,
+							lineCount: 0,
+							fileName: "RESETTING",
+							ramUsage: process.memoryUsage().heapUsed,
+							cpuUsage: process.cpuUsage(),
+						},
+					};
+					for (const dataConnection of ReceivingDataConnections) {
+						dataConnection.send(JSON.stringify(LAST_DATA_SENT));
 					}
 					console.log(`RESET`);
 					return;
@@ -112,25 +129,23 @@ const server = Bun.serve({
 					const startTime = Date.now();
 					const parsedObj = scrimCsvToObjArray(CURRENT.lines);
 					const DTO = createDTO(parsedObj);
-					console.log(DTO);
 					const timeToParse = Date.now() - startTime;
 					// send to all data connections
-					for (const dataConnection of RecievingDataConnections) {
-						dataConnection.send(
-							JSON.stringify({
-								type: "data",
-								data: DTO,
-								parser_load: {
-									totalConnections:
-										RecievingDataConnections.length,
-									lineCount: CURRENT.lines.length,
-									fileName: CURRENT.fileName,
-									parseTime: timeToParse,
-									ramUsage: process.memoryUsage().heapUsed,
-									cpuUsage: process.cpuUsage(),
-								},
-							})
-						);
+					LAST_DATA_SENT = {
+						type: "data",
+						data: DTO,
+						parser_load: {
+							totalConnections: ReceivingDataConnections.length,
+							lineCount: CURRENT.lines.length,
+							fileName: CURRENT.fileName,
+							parseTime: timeToParse,
+							ramUsage: process.memoryUsage().heapUsed,
+							cpuUsage: process.cpuUsage(),
+						},
+					};
+
+					for (const dataConnection of ReceivingDataConnections) {
+						dataConnection.send(JSON.stringify(LAST_DATA_SENT));
 					}
 				}
 			}

@@ -10,6 +10,49 @@ let LAST_LINE_READ = 0;
 let WEB_SERVER = null;
 let WS_CONNECTION = null;
 
+function connectToWs() {
+	if (WS_CONNECTION) {
+		WS_CONNECTION.close();
+	}
+
+	// connect to the WS server
+	WS_CONNECTION = new WebSocket(WEB_SERVER);
+	WS_CONNECTION.onopen = (ws) => {
+		console.log(`Connected to ${WEB_SERVER}`);
+		WS_CONNECTION.send(
+			JSON.stringify({
+				type: "init",
+				id: "gameclient",
+			})
+		);
+		WS_CONNECTION.send(JSON.stringify({ reset: true }));
+	};
+	WS_CONNECTION.onclose = () => {
+		console.log(`Disconnected from ${WEB_SERVER}`);
+		LAST_LINE_READ = 0;
+		// attempt to reconnect every second for the next minute
+		let reconnectAttempts = 0;
+		const reconnectInterval = setInterval(() => {
+			if (reconnectAttempts > 60) {
+				clearInterval(reconnectInterval);
+				return;
+			}
+			if (WS_CONNECTION.readyState == 1) {
+				clearInterval(reconnectInterval);
+				return;
+			}
+
+			reconnectAttempts++;
+			console.log(`Attempt ${reconnectAttempts} to reconnect to WS`);
+			WS_CONNECTION = null;
+			connectToWs();
+		}, 1000);
+	};
+	WS_CONNECTION.onerror = (error) => {
+		console.error(`Error connecting to WS`, error.message);
+	};
+}
+
 const app = express()
 	.use(express.static("src/publicclient"))
 	.use(express.json())
@@ -18,32 +61,10 @@ const app = express()
 		if ("websocket" in body === false)
 			return res.status(400).send(`no websocket`);
 		WEB_SERVER = body.websocket;
-		console.log(`WebServer is running at ${WEB_SERVER}`);
+		console.log(`WebSocket Server is running at ${WEB_SERVER}`);
 		setTimeout(async () => {
 			// close any existing connection
-			if (WS_CONNECTION !== null) {
-				WS_CONNECTION.close();
-				WS_CONNECTION = null;
-			}
-
-			// connect to the WS server
-			WS_CONNECTION = new WebSocket(WEB_SERVER);
-			WS_CONNECTION.onopen = (ws) => {
-				console.log(`Connected to ${WEB_SERVER}`);
-				WS_CONNECTION.send(
-					JSON.stringify({
-						type: "init",
-						id: "gameclient",
-					})
-				);
-				WS_CONNECTION.send(JSON.stringify({ reset: true }));
-			};
-			WS_CONNECTION.onclose = () => {
-				console.log(`Disconnected from ${WEB_SERVER}`);
-			};
-			WS_CONNECTION.onerror = (error) => {
-				console.error(`Error:`, error);
-			};
+			connectToWs(WEB_SERVER);
 		}, 100);
 
 		if ("workshop" in body === false)
