@@ -1,9 +1,91 @@
 <script>
+	let CurrentMatchID = "";
+
+	function fixHeroName(heroName) {
+		if (heroName == "Junker Queen") return "Junkerqueen";
+		if (heroName == "Soldier: 76") return "Soldier76";
+		if (heroName == "D.Va") return "DVa";
+		if (heroName == "Torbjörn") return "Torbjorn";
+		if (heroName == "Lúcio") return "Lucio";
+		if (heroName == "Wrecking Ball") return "WreckingBall";
+		return heroName
+	}
+
+	function loadPlayers(playerData) {
+		const playerTemplate = document.getElementById("playerTemplate");
+		const playerTable = document.getElementById("playerTable");
+		const keys = Object.keys(playerData);
+
+		for (const playerName of keys) {
+			const player = playerData[playerName];
+			console.log(playerName, player)
+
+			const playerRow = playerTemplate.cloneNode(true);
+			playerRow.id = playerName;
+			// set data-isPlayer to true
+			playerRow.setAttribute("data-isPlayer", true);
+			playerRow.style.display = "table-row";
+			playerRow.querySelector("[data-type=playerName]").innerHTML =
+				playerName;
+			playerRow.querySelector(
+				"[data-type=hero]"
+			).innerHTML = `<image width="32px" src="/public/imgs/${fixHeroName(player.hero)}.png"/>`;
+			playerRow.querySelector("[data-type=damageDealt]").innerHTML =
+				player.hero_damage
+					? Math.round(player.hero_damage)
+					: 0;
+			playerRow.querySelector("[data-type=damageReceived]").innerHTML =
+				player.damage_taken
+					? Math.round(player.damage_taken) 
+					: 0;
+			playerRow.querySelector("[data-type=healingGiven]").innerHTML =
+				player.healing_dealt
+					? Math.round(player.healing_dealt)
+					: 0;
+			playerRow.querySelector("[data-type=healingReceived]").innerHTML =
+				player.healing_received
+					? Math.round(player.healing_received) 
+					: 0;
+			playerRow.querySelector("[data-type=dmgmit]").innerHTML =
+				player.damage_mitigated
+					? Math.round(player.damage_mitigated) 
+					: 0;
+			playerRow.querySelector("[data-type=deaths]").innerHTML =
+				player.deaths ? player.deaths : 0;
+			playerRow.querySelector("[data-type=finalBlows]").innerHTML =
+				player.final_blows ? player.final_blows : 0;
+			playerRow.querySelector("[data-type=kills]").innerHTML =
+				player.eliminations ? player.eliminations : 0;
+			playerRow.querySelector("[data-type=ultsUsed]").innerHTML =
+				player.ults_used ? player.ults_used : 0;
+			// find the old row and replace it
+			const oldRow = document.getElementById(playerName);
+			if (oldRow) {
+				playerTable.replaceChild(playerRow, oldRow);
+			} else playerTable.appendChild(playerRow);
+		}
+	}
+
 	function passData(parsedData) {
-		
 		const data = parsedData.data;
-		
-		console.log(`got data`, data);
+		console.log(parsedData);
+
+		const CurrentMatchId = parsedData.parser_load.fileName.replace(
+			"Log-",
+			""
+		).replace(".txt", "");
+
+		if (CurrentMatchId != CurrentMatchID) {
+			CurrentMatchID = CurrentMatchId;
+			const playerTemplate = document.getElementById("playerTemplate");
+			document.getElementById("playerTable").innerHTML = "";
+			document
+				.getElementById("playerTable")
+				.appendChild(playerTemplate);
+		}
+
+		loadPlayers(data.player_stats);
+
 		document.getElementById("load.Map").innerHTML =
 			data.matchInformation.map;
 		document.getElementById("load.MapMode").innerHTML =
@@ -49,8 +131,9 @@
 				display: inline-block;
 			"
 		>
-			<image src="/favicon.png" height="48px" /> </span
-		><span class="mui-col-md-4">LogTime WS Viewer</span>
+			<image src="/favicon.png" height="48px" />
+		</span>
+		<span class="mui-col-md-4">LogTime WS Viewer</span>
 		<span
 			class="mui--text-right mui-col-md-6 mui--text-body2"
 			style="padding-right: 2px"
@@ -72,22 +155,69 @@
 	<div class="mui-panel">
 		<ul class="mui-tabs__bar">
 			<li class="mui--is-active">
-				<a data-mui-toggle="tab" data-mui-controls="ow-match-info"
-					>Overwatch Match Information</a
-				>
+				<a data-mui-toggle="tab" data-mui-controls="ow-players-info">
+					Players
+				</a>
 			</li>
 			<li>
-				<a data-mui-toggle="tab" data-mui-controls="ow-server-load"
-					>Overwatch Server Load</a
-				>
+				<a data-mui-toggle="tab" data-mui-controls="ow-match-info">
+					Match Information
+				</a>
 			</li>
 			<li>
-				<a data-mui-toggle="tab" data-mui-controls="parser-server-load"
-					>Parser Server Load</a
-				>
+				<a data-mui-toggle="tab" data-mui-controls="ow-server-load">
+					Server Load
+				</a>
+			</li>
+			<li>
+				<a data-mui-toggle="tab" data-mui-controls="parser-server-load">
+					Parser Server Load
+				</a>
 			</li>
 		</ul>
-		<div class="mui-tabs__pane mui--is-active" id="ow-match-info">
+		<div class="mui-tabs__pane mui--is-active" id="ow-players-info">
+			<div class="mui--text-display2">Overwatch Players Information</div>
+			<div class="mui--text-body1">
+				<table class="mui-table mui-table--bordered">
+					<thead>
+						<tr>
+							<th>Player</th>
+							<th>Current Hero</th>
+							<th>Kills</th>
+							<th>Final Blows</th>
+							<th>Dmg. Dealt</th>
+							<th>Dmg. Received</th>
+							<th>Heal. Done</th>
+							<th>Heal. Received</th>
+							<th>Dmg. Mitigated</th>
+							<th>Deaths</th>
+							<th>Ults. Used</th>
+						</tr>
+					</thead>
+					<tbody id="playerTable">
+						<tr id="playerTemplate" style="display: none;">
+							<td data-type="playerName">LenaOxt0n</td>
+							<td data-type="hero">
+								<image
+									width="32px"
+									src="/public/imgs/Tracer.png"
+								/>
+							</td>
+							<td data-type="kills">0</td>
+							<td data-type="finalBlows">0</td>
+							<td data-type="damageDealt">0</td>
+							<td data-type="damageReceived">0</td>
+							<td data-type="healingGiven">0</td>
+							<td data-type="healingReceived">0</td>
+							<td data-type="dmgmit">0</td>
+							<td data-type="deaths">0</td>
+							<td data-type="ultsUsed">0</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div class="mui-tabs__pane" id="ow-match-info">
 			<div class="mui--text-display2">Overwatch Match Information</div>
 			<div class="mui--text-body1 mui-row">
 				<div class="mui--text-display1 mui-col-md-4">
@@ -182,15 +312,6 @@
 		<div class="mui-tabs__pane" id="parser-server-load">
 			<div class="mui--text-display2">Parser Server Load</div>
 			<div class="mui--text-body1 mui-row">
-				<div class="mui--text-display1 mui-col-md-4">
-					Connections
-					<div
-						class="mui--text-headline dataTarget"
-						id="parser.ConnectionCount"
-					>
-						Waiting
-					</div>
-				</div>
 				<div class="mui--text-display1 mui-col-md-4">
 					Lines
 					<div

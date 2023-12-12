@@ -9,3 +9,14 @@ body,
 a {
 	color: white !important;
 }
+
+.mui-table > thead > tr > th {
+	border-bottom: 1px solid #de6f2b !important;
+}
+tbody > tr > td {
+	border-bottom: 1px solid #de6f2b !important;
+}
+
+tbody > tr:nth-child(odd) {
+	background-color: #272727 !important;
+}

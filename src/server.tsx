@@ -1,7 +1,5 @@
 import { ServerWebSocket } from "bun";
-import { renderToReadableStream } from "react-dom/server";
 import { createDTO, scrimCsvToObjArray } from "./parser";
-import Index from "./server/pages/index";
 
 let CURRENT: {
 	fileName: string;
@@ -19,32 +17,25 @@ let ReceivingDataConnections: ServerWebSocket<any>[] = [];
 
 const server = Bun.serve({
 	development: true,
-	async error(req, error) {
-		console.error(error);
-		return new Response(error.message, {
-			status: 500,
-		});
-	},
 	async fetch(req, server) {
-		// generate a random string
 		const success = server.upgrade(req);
 		if (success) {
-			// Bun automatically returns a 101 Switching Protocols
-			// if the upgrade succeeds
 			return undefined;
 		}
 
-		if (req.url.endsWith("/favicon.png")) {
+		// get the search params from the url
+		const url = new URL(req.url);
+
+		if (url.pathname == "/favicon.png") {
 			return new Response(Bun.file("./src/public/imgs/favicon.png"));
 		}
-		if (req.url.includes("/public/")) {
-			const fileName = req.url.split("/public/")[1];
+		if (url.pathname.includes("/public/")) {
+			const fileName = url.pathname.split("/public/")[1];
 			return new Response(Bun.file("./src/public/" + fileName));
 		}
 		const header = Bun.file("./src/public/head.html");
 		const headerText = await header.text();
-
-		if (req.url == "/player") {
+		if (url.hostname == "/player") {
 		}
 
 		// return html with head.html and body.html
@@ -96,7 +87,24 @@ const server = Bun.serve({
 					`Total connections:`,
 					ReceivingDataConnections.length
 				);
-				ws.send(JSON.stringify(LAST_DATA_SENT));
+				if (!LAST_DATA_SENT.parser_load) {
+					LAST_DATA_SENT.parser_load = {
+						totalConnections: ReceivingDataConnections.length,
+						lineCount: 0,
+						fileName: "RESETTING",
+						ramUsage: process.memoryUsage().heapUsed,
+						cpuUsage: process.cpuUsage(),
+					};
+				}
+				LAST_DATA_SENT.parser_load.totalConnections =
+					ReceivingDataConnections.length;
+				LAST_DATA_SENT.parser_load.ramUsage =
+					process.memoryUsage().heapUsed;
+				LAST_DATA_SENT.parser_load.cpuUsage = process.cpuUsage();
+
+				for (const dataConnection of ReceivingDataConnections) {
+					dataConnection.send(JSON.stringify(LAST_DATA_SENT));
+				}
 			}
 			if (ws == GameClientWS) {
 				if (parsed.reset) {

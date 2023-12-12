@@ -63,7 +63,7 @@ export const scrimCsvToObjArray = (rows: string[], delimiter = ",") => {
 							hero: values[5],
 							playerName: values[4],
 						},
-						recievingPlayer: {
+						receivingPlayer: {
 							hero: values[8],
 							playerName: values[7],
 						},
@@ -73,6 +73,8 @@ export const scrimCsvToObjArray = (rows: string[], delimiter = ",") => {
 			}
 
 			if (key === OW_EVENT_KEYS.DAMAGE) {
+				let dmg = parseFloat(values[10]);
+				if (values[11] == "True") dmg = dmg * 2;
 				const el = {
 					[key]: {
 						timestamp: values[2],
@@ -81,11 +83,12 @@ export const scrimCsvToObjArray = (rows: string[], delimiter = ",") => {
 							hero: values[5],
 							playerName: values[4],
 						},
-						recievingPlayer: {
+						receivingPlayer: {
 							hero: values[8],
 							playerName: values[7],
 						},
-						amount: parseFloat(values[10]),
+						amount: dmg,
+						isCritical: values[11] == "True",
 					},
 				};
 				return el;
@@ -100,7 +103,7 @@ export const scrimCsvToObjArray = (rows: string[], delimiter = ",") => {
 							hero: values[5],
 							playerName: values[4],
 						},
-						recievingPlayer: {
+						receivingPlayer: {
 							hero: values[8],
 							playerName: values[7],
 						},
@@ -219,23 +222,46 @@ export const scrimCsvToObjArray = (rows: string[], delimiter = ",") => {
 			}
 
 			if (key === OW_EVENT_KEYS.PLAYER_STAT) {
+				console.log(values[2], values[3], values[4], values[5]);
 				const el = {
 					[key]: {
-						team: values[3],
 						round: values[3],
-						hero: values[6],
+						team: values[4],
 						playerName: values[5],
+						hero: values[6],
 						eliminations: values[7],
 						final_blows: values[8],
 						deaths: values[9],
+						all_damage: values[10],
+						barrier_damage: values[11],
 						hero_damage: values[12],
 						healing_dealt: values[13],
+						healing_received: values[14],
 						self_healing: values[15],
 						damage_taken: values[16],
 						damage_mitigated: values[17],
 						defensive_assists: values[18],
 						offensive_assists: values[19],
-						weapon_accuracy: values[values.length - 2], // 2nd to last value. can't be bothered to find the index
+						ults_earned: values[20],
+						ults_used: values[21],
+						multi_kill_best: values[22],
+						multi_kills: values[23],
+						solo_kills: values[24],
+						objective_kills: values[25],
+						environmental_kills: values[26],
+						environmental_deaths: values[27],
+						critical_hits: values[28],
+						critical_hit_accuracy: values[29],
+						scoped_accuracy: values[30],
+						scoped_critical_hit_accuracy: values[31],
+						scoped_critical_hit_kills: values[32],
+						shots_fired: values[33],
+						shots_hit: values[34],
+						shots_missed: values[35],
+						scoped_shots_fired: values[36],
+						scoped_shots_hit: values[37],
+						weapon_accuracy: values[38],
+						hero_time_played: values[39],
 					},
 				};
 
@@ -268,7 +294,6 @@ export const createDTO = (events: any) => {
 			DTO["server_load"] = event[OW_EVENT_KEYS.SERVER_LOAD];
 		}
 		if (event[OW_EVENT_KEYS.MATCH_START]) {
-			console.log("GOT MAP NAME!");
 			MAP = event?.[OW_EVENT_KEYS.MATCH_START]?.mapName;
 			MODE = event?.[OW_EVENT_KEYS.MATCH_START]?.mode;
 			TEAM_1 = event?.[OW_EVENT_KEYS.MATCH_START]?.team1;
@@ -302,190 +327,6 @@ export const createDTO = (events: any) => {
 					};
 
 				DTO["players"] = { ...PLAYERS };
-			}
-		}
-
-		if (event[OW_EVENT_KEYS.KILL]) {
-			if (event?.[OW_EVENT_KEYS.KILL]?.player?.playerName) {
-				if (PLAYERS[event?.[OW_EVENT_KEYS.KILL]?.player?.playerName]) {
-					if (
-						PLAYERS[event?.[OW_EVENT_KEYS.KILL]?.player?.playerName]
-							.kills
-					) {
-						PLAYERS[
-							event?.[OW_EVENT_KEYS.KILL]?.player?.playerName
-						].kills += 1;
-					} else {
-						PLAYERS[
-							event?.[OW_EVENT_KEYS.KILL]?.player?.playerName
-						].kills = 1;
-					}
-
-					// Log deaths of other player
-					if (
-						PLAYERS[
-							event?.[OW_EVENT_KEYS.KILL]?.recievingPlayer
-								?.playerName
-						]
-					) {
-						if (
-							PLAYERS[
-								event?.[OW_EVENT_KEYS.KILL]?.recievingPlayer
-									?.playerName
-							]?.deaths
-						) {
-							PLAYERS[
-								event?.[
-									OW_EVENT_KEYS.KILL
-								]?.recievingPlayer?.playerName
-							].deaths += 1;
-						} else {
-							PLAYERS[
-								event?.[
-									OW_EVENT_KEYS.KILL
-								]?.recievingPlayer?.playerName
-							].deaths = 1;
-						}
-					} else {
-						PLAYERS[
-							event?.[
-								OW_EVENT_KEYS.KILL
-							]?.recievingPlayer?.playerName
-						] = {
-							...event?.[OW_EVENT_KEYS.KILL]?.recievingPlayer,
-							deaths: 1,
-						};
-					}
-
-					DTO["players"] = PLAYERS;
-				}
-			}
-		}
-
-		if (event[OW_EVENT_KEYS.DAMAGE]) {
-			if (event?.[OW_EVENT_KEYS.DAMAGE]?.player?.playerName) {
-				if (
-					PLAYERS[event?.[OW_EVENT_KEYS.DAMAGE]?.player?.playerName]
-				) {
-					if (
-						PLAYERS[
-							event?.[OW_EVENT_KEYS.DAMAGE]?.player?.playerName
-						].damageDealt
-					) {
-						PLAYERS[
-							event?.[OW_EVENT_KEYS.DAMAGE]?.player?.playerName
-						].damageDealt += event?.[OW_EVENT_KEYS.DAMAGE]?.amount;
-					} else {
-						PLAYERS[
-							event?.[OW_EVENT_KEYS.DAMAGE]?.player?.playerName
-						].damageDealt = event?.[OW_EVENT_KEYS.DAMAGE]?.amount;
-					}
-
-					// Log dmg received of other player
-					if (
-						PLAYERS[
-							event?.[OW_EVENT_KEYS.DAMAGE]?.recievingPlayer
-								?.playerName
-						]
-					) {
-						if (
-							PLAYERS[
-								event?.[OW_EVENT_KEYS.DAMAGE]?.recievingPlayer
-									?.playerName
-							]?.damageReceived
-						) {
-							PLAYERS[
-								event?.[
-									OW_EVENT_KEYS.DAMAGE
-								]?.recievingPlayer?.playerName
-							].damageReceived +=
-								event?.[OW_EVENT_KEYS.DAMAGE]?.amount;
-						} else {
-							PLAYERS[
-								event?.[
-									OW_EVENT_KEYS.DAMAGE
-								]?.recievingPlayer?.playerName
-							].damageReceived =
-								event?.[OW_EVENT_KEYS.DAMAGE]?.amount;
-						}
-					} else {
-						PLAYERS[
-							event?.[
-								OW_EVENT_KEYS.DAMAGE
-							]?.recievingPlayer?.playerName
-						] = {
-							...event?.[OW_EVENT_KEYS.DAMAGE]?.recievingPlayer,
-							damageReceived:
-								event?.[OW_EVENT_KEYS.DAMAGE]?.amount,
-						};
-					}
-
-					DTO["players"] = PLAYERS;
-				}
-			}
-		}
-
-		if (event[OW_EVENT_KEYS.OFFENSIVE_ASSIST]) {
-			if (event?.[OW_EVENT_KEYS.OFFENSIVE_ASSIST]?.player?.playerName) {
-				if (
-					PLAYERS[
-						event?.[OW_EVENT_KEYS.OFFENSIVE_ASSIST]?.player
-							?.playerName
-					]
-				) {
-					if (
-						PLAYERS[
-							event?.[OW_EVENT_KEYS.OFFENSIVE_ASSIST]?.player
-								?.playerName
-						].off_assists
-					) {
-						PLAYERS[
-							event?.[
-								OW_EVENT_KEYS.OFFENSIVE_ASSIST
-							]?.player?.playerName
-						].off_assists += 1;
-					} else {
-						PLAYERS[
-							event?.[
-								OW_EVENT_KEYS.OFFENSIVE_ASSIST
-							]?.player?.playerName
-						].off_assists = 1;
-					}
-
-					DTO["players"] = PLAYERS;
-				}
-			}
-		}
-
-		if (event[OW_EVENT_KEYS.DEFENSIVE_ASSIST]) {
-			if (event?.[OW_EVENT_KEYS.DEFENSIVE_ASSIST]?.player?.playerName) {
-				if (
-					PLAYERS[
-						event?.[OW_EVENT_KEYS.DEFENSIVE_ASSIST]?.player
-							?.playerName
-					]
-				) {
-					if (
-						PLAYERS[
-							event?.[OW_EVENT_KEYS.DEFENSIVE_ASSIST]?.player
-								?.playerName
-						].def_assists
-					) {
-						PLAYERS[
-							event?.[
-								OW_EVENT_KEYS.DEFENSIVE_ASSIST
-							]?.player?.playerName
-						].def_assists += 1;
-					} else {
-						PLAYERS[
-							event?.[
-								OW_EVENT_KEYS.DEFENSIVE_ASSIST
-							]?.player?.playerName
-						].def_assists = 1;
-					}
-
-					DTO["players"] = PLAYERS;
-				}
 			}
 		}
 
@@ -604,252 +445,12 @@ export const createDTO = (events: any) => {
 				const newRoundNo = parseInt(
 					event?.[OW_EVENT_KEYS.PLAYER_STAT]?.round
 				);
-				const oldRoundNo = PLAYER_STATS[playerName]?.round || 0;
 				const newHero = event?.[OW_EVENT_KEYS.PLAYER_STAT]?.hero;
-				const oldHero = PLAYER_STATS[playerName]?.hero || "";
-
-				if (PLAYER_STATS[playerName]) {
-					if (newRoundNo === oldRoundNo) {
-						PLAYER_STATS[playerName].round = newRoundNo;
-						PLAYER_STATS[playerName].hero = newHero;
-						PLAYER_STATS[playerName].heroList.push(newHero);
-						PLAYER_STATS[playerName].eliminations += parseInt(
-							event?.[OW_EVENT_KEYS.PLAYER_STAT]?.eliminations
-						);
-
-						PLAYER_STATS[playerName].final_blows += parseInt(
-							event?.[OW_EVENT_KEYS.PLAYER_STAT]?.final_blows
-						);
-
-						PLAYER_STATS[playerName].deaths += parseInt(
-							event?.[OW_EVENT_KEYS.PLAYER_STAT]?.deaths
-						);
-
-						PLAYER_STATS[playerName].hero_damage += parseInt(
-							event?.[OW_EVENT_KEYS.PLAYER_STAT]?.hero_damage
-						);
-
-						PLAYER_STATS[playerName].healing_dealt += parseInt(
-							event?.[OW_EVENT_KEYS.PLAYER_STAT]?.healing_dealt
-						);
-
-						PLAYER_STATS[playerName].self_healing += parseInt(
-							event?.[OW_EVENT_KEYS.PLAYER_STAT]?.self_healing
-						);
-
-						PLAYER_STATS[playerName].damage_taken += parseInt(
-							event?.[OW_EVENT_KEYS.PLAYER_STAT]?.damage_taken
-						);
-
-						PLAYER_STATS[playerName].damage_mitigated += parseInt(
-							event?.[OW_EVENT_KEYS.PLAYER_STAT]?.damage_mitigated
-						);
-
-						PLAYER_STATS[playerName].defensive_assists += parseInt(
-							event?.[OW_EVENT_KEYS.PLAYER_STAT]
-								?.defensive_assists
-						);
-
-						PLAYER_STATS[playerName].offensive_assists += parseInt(
-							event?.[OW_EVENT_KEYS.PLAYER_STAT]
-								?.offensive_assists
-						);
-
-						PLAYER_STATS[playerName].weapon_accuracy += parseFloat(
-							event?.[OW_EVENT_KEYS.PLAYER_STAT]?.weapon_accuracy
-						);
-					} else {
-						PLAYER_STATS[playerName] = {
-							round: parseInt(
-								event?.[OW_EVENT_KEYS.PLAYER_STAT]?.round
-							),
-							hero: event?.[OW_EVENT_KEYS.PLAYER_STAT]?.hero,
-							heroList: [
-								event?.[OW_EVENT_KEYS.PLAYER_STAT]?.hero,
-							],
-							eliminations: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-								?.eliminations
-								? parseInt(
-										event?.[OW_EVENT_KEYS.PLAYER_STAT]
-											?.eliminations
-								  )
-								: 0,
-
-							final_blows: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-								?.final_blows
-								? parseInt(
-										event?.[OW_EVENT_KEYS.PLAYER_STAT]
-											?.final_blows
-								  )
-								: 0,
-
-							deaths: event?.[OW_EVENT_KEYS.PLAYER_STAT]?.deaths
-								? parseInt(
-										event?.[OW_EVENT_KEYS.PLAYER_STAT]
-											?.deaths
-								  )
-								: 0,
-
-							hero_damage: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-								?.hero_damage
-								? parseInt(
-										event?.[OW_EVENT_KEYS.PLAYER_STAT]
-											?.hero_damage
-								  )
-								: 0,
-
-							healing_dealt: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-								?.healing_dealt
-								? parseInt(
-										event?.[OW_EVENT_KEYS.PLAYER_STAT]
-											?.healing_dealt
-								  )
-								: 0,
-
-							self_healing: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-								?.self_healing
-								? parseInt(
-										event?.[OW_EVENT_KEYS.PLAYER_STAT]
-											?.self_healing
-								  )
-								: 0,
-
-							damage_taken: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-								?.damage_taken
-								? parseInt(
-										event?.[OW_EVENT_KEYS.PLAYER_STAT]
-											?.damage_taken
-								  )
-								: 0,
-
-							damage_mitigated: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-								?.damage_mitigated
-								? parseInt(
-										event?.[OW_EVENT_KEYS.PLAYER_STAT]
-											?.damage_mitigated
-								  )
-								: 0,
-
-							defensive_assists: event?.[
-								OW_EVENT_KEYS.PLAYER_STAT
-							]?.defensive_assists
-								? parseInt(
-										event?.[OW_EVENT_KEYS.PLAYER_STAT]
-											?.defensive_assists
-								  )
-								: 0,
-
-							offensive_assists: event?.[
-								OW_EVENT_KEYS.PLAYER_STAT
-							]?.offensive_assists
-								? parseInt(
-										event?.[OW_EVENT_KEYS.PLAYER_STAT]
-											?.offensive_assists
-								  )
-								: 0,
-
-							weapon_accuracy: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-								?.weapon_accuracy
-								? parseFloat(
-										event?.[OW_EVENT_KEYS.PLAYER_STAT]
-											?.weapon_accuracy
-								  )
-								: 0,
-						};
-					}
-				} else {
-					PLAYER_STATS[playerName] = {
-						round: parseInt(
-							event?.[OW_EVENT_KEYS.PLAYER_STAT]?.round
-						),
-						hero: event?.[OW_EVENT_KEYS.PLAYER_STAT]?.hero,
-						heroList: [event?.[OW_EVENT_KEYS.PLAYER_STAT]?.hero],
-						eliminations: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-							?.eliminations
-							? parseInt(
-									event?.[OW_EVENT_KEYS.PLAYER_STAT]
-										?.eliminations
-							  )
-							: 0,
-
-						final_blows: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-							?.final_blows
-							? parseInt(
-									event?.[OW_EVENT_KEYS.PLAYER_STAT]
-										?.final_blows
-							  )
-							: 0,
-
-						deaths: event?.[OW_EVENT_KEYS.PLAYER_STAT]?.deaths
-							? parseInt(
-									event?.[OW_EVENT_KEYS.PLAYER_STAT]?.deaths
-							  )
-							: 0,
-
-						hero_damage: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-							?.hero_damage
-							? parseInt(
-									event?.[OW_EVENT_KEYS.PLAYER_STAT]
-										?.hero_damage
-							  )
-							: 0,
-
-						healing_dealt: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-							?.healing_dealt
-							? parseInt(
-									event?.[OW_EVENT_KEYS.PLAYER_STAT]
-										?.healing_dealt
-							  )
-							: 0,
-
-						self_healing: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-							?.self_healing
-							? parseInt(
-									event?.[OW_EVENT_KEYS.PLAYER_STAT]
-										?.self_healing
-							  )
-							: 0,
-
-						damage_taken: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-							?.damage_taken
-							? parseInt(
-									event?.[OW_EVENT_KEYS.PLAYER_STAT]
-										?.damage_taken
-							  )
-							: 0,
-
-						damage_mitigated: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-							?.damage_mitigated
-							? parseInt(
-									event?.[OW_EVENT_KEYS.PLAYER_STAT]
-										?.damage_mitigated
-							  )
-							: 0,
-
-						defensive_assists: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-							?.defensive_assists
-							? parseInt(
-									event?.[OW_EVENT_KEYS.PLAYER_STAT]
-										?.defensive_assists
-							  )
-							: 0,
-						offensive_assists: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-							?.offensive_assists
-							? parseInt(
-									event?.[OW_EVENT_KEYS.PLAYER_STAT]
-										?.offensive_assists
-							  )
-							: 0,
-
-						weapon_accuracy: event?.[OW_EVENT_KEYS.PLAYER_STAT]
-							?.weapon_accuracy
-							? parseFloat(
-									event?.[OW_EVENT_KEYS.PLAYER_STAT]
-										?.weapon_accuracy
-							  )
-							: 0,
-					};
-				}
+				PLAYER_STATS[playerName] = {
+					round: newRoundNo,
+					hero: newHero,
+					...event?.[OW_EVENT_KEYS.PLAYER_STAT],
+				};
 			}
 		}
 	}
