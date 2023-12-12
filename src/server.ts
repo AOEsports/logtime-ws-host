@@ -26,16 +26,15 @@ const server = Bun.serve({
 		}
 
 		if (req.url.endsWith("/favicon.png")) {
-			return new Response(Bun.file("./src/publicserver/favicon.png"));
+			return new Response(Bun.file("./src/public/favicon.png"));
 		}
-		console.log(req.url);
 		if (req.url.includes("/public/")) {
 			const fileName = req.url.split("/public/")[1];
 			return new Response(Bun.file("./src/public/" + fileName));
 		}
 
 		// handle HTTP request normally
-		return new Response(Bun.file("./src/publicserver/index.html"));
+		return new Response(Bun.file("./src/public/index.html"));
 	},
 	websocket: {
 		// this is called when a message is received
