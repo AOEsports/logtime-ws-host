@@ -35,15 +35,27 @@ const server = Bun.serve({
 		}
 
 		if (req.url.endsWith("/favicon.png")) {
-			return new Response(Bun.file("./src/public/favicon.png"));
+			return new Response(Bun.file("./src/public/imgs/favicon.png"));
 		}
 		if (req.url.includes("/public/")) {
 			const fileName = req.url.split("/public/")[1];
 			return new Response(Bun.file("./src/public/" + fileName));
 		}
+		const header = Bun.file("./src/public/head.html");
+		const headerText = await header.text();
+
+		if (req.url == "/player") {
+		}
+
+		// return html with head.html and body.html
 
 		// handle HTTP request normally
-		return new Response(Bun.file("./src/public/index.html"), {
+		const index = Bun.file("./src/public/index.html");
+		const indexText = await index.text();
+
+		const returnPage = headerText.replace("%BODY%", indexText);
+
+		return new Response(returnPage, {
 			headers: { "Content-Type": "text/html" },
 		});
 	},
