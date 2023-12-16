@@ -1,0 +1,92 @@
+<script>
+	let CurrentMatchID = "";
+
+	function passData(parsedData) {
+		const data = parsedData.data;
+		// get search params
+		const urlParams = new URLSearchParams(window.location.search);
+		const playerName = urlParams.get("player");
+		$('[data-type="playerName"]').text(playerName).text();
+
+		const CurrentMatchId = parsedData.parser_load.fileName
+			.replace("Log-", "")
+			.replace(".txt", "");
+
+		document.getElementById("load.Map").innerHTML =
+			data.matchInformation.map;
+		document.getElementById("load.MapMode").innerHTML =
+			data.matchInformation.mode;
+		document.getElementById(
+			"load.MapModeImage"
+		).src = `/public/imgs/${data.matchInformation.mode}.webp`;
+		document.getElementById("load.Team1").innerHTML =
+			data.matchInformation.team_1;
+		document.getElementById("load.Team2").innerHTML =
+			data.matchInformation.team_2;
+		document.getElementById("load.RoundStatus").innerHTML =
+			data.round_status;
+		document.getElementById("load.MatchID").innerHTML = CurrentMatchId;
+	}
+</script>
+<div>
+	<div class="mui--text-display2">Overwatch Match Information</div>
+	<div class="mui--text-body1 mui-row">
+		<div class="mui--text-display1 mui-col-md-4">
+			Map
+			<div class="mui--text-headline dataTarget" id="load.Map">
+				Waiting
+			</div>
+		</div>
+
+		<div class="mui--text-display1 mui-col-md-4">
+			Team 1
+			<div class="mui--text-headline dataTarget" id="load.Team1">
+				Waiting
+			</div>
+		</div>
+		<div class="mui--text-display1 mui-col-md-4">
+			Team 2
+			<div class="mui--text-headline dataTarget" id="load.Team2">
+				Waiting
+			</div>
+		</div>
+		<div class="mui--text-display1 mui-col-md-4">
+			Mode
+			<div>
+				<image
+					src="/public/imgs/Assault.webp"
+					width="32px"
+					style="display: inline"
+					id="load.MapModeImage"
+				/>
+				<div
+					class="mui--text-headline dataTarget"
+					id="load.MapMode"
+					style="display: inline"
+				>
+					Waiting
+				</div>
+			</div>
+		</div>
+
+		<div class="mui--text-display1 mui-col-md-4">
+			Round Status
+			<div
+				class="mui--text-headline dataTarget"
+				id="load.RoundStatus"
+			>
+				Waiting
+			</div>
+		</div>
+
+		<div class="mui--text-display1 mui-col-md-4">
+			Match ID
+			<div
+				class="mui--text-headline dataTarget"
+				id="load.MatchID"
+			>
+				Waiting
+			</div>
+		</div>
+	</div>
+</div>

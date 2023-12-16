@@ -1,0 +1,31 @@
+<div class="mui-appbar mui-container-fluid" style="margin-bottom: 2rem">
+	<div class="mui--text-display2 mui-row">
+		<span
+			class="mui-col-md-2"
+			style="
+				padding-right: 4rem;
+				padding-left: 2rem;
+				padding-top: 0.2rem;
+				display: inline-block;
+			"
+		>
+			<image src="/favicon.png" height="48px" />
+		</span>
+		<span class="mui-col-md-4">LogTime WS Viewer</span>
+		<span
+			class="mui--text-right mui-col-md-6 mui--text-body2"
+			style="padding-right: 2px"
+		>
+			<button
+				onclick="connectToWebSocket()"
+				class="mui-btn mui-btn--accent mui-btn--small"
+			>
+				Reconnect
+			</button>
+			Connections
+			<span class="dataTarget" id="parser.ConnectionCount">
+				Waiting
+			</span>
+		</span>
+	</div>
+</div>

@@ -1,0 +1,45 @@
+<script>
+	let CurrentMatchID = "";
+
+	function passData(parsedData) {
+		const data = parsedData.data;
+		const serverLoad = data.server_load;
+		try {
+			document.getElementById("load.Current").innerHTML =
+				serverLoad.current;
+			document.getElementById("load.Peak").innerHTML = serverLoad.peak;
+			document.getElementById("load.Average").innerHTML =
+				serverLoad.average;
+		} catch (e) {}
+	}
+</script>
+<div >
+	<div class="mui--text-display2">Overwatch Server Load</div>
+	<div class="mui--text-body1 mui-row">
+		<div class="mui--text-display1 mui-col-md-4">
+			Current
+			<div
+				class="mui--text-headline dataTarget"
+				id="load.Current"
+			>
+				Waiting
+			</div>
+		</div>
+
+		<div class="mui--text-display1 mui-col-md-4">
+			Peak
+			<div class="mui--text-headline dataTarget" id="load.Peak">
+				Waiting
+			</div>
+		</div>
+		<div class="mui--text-display1 mui-col-md-4">
+			Average
+			<div
+				class="mui--text-headline dataTarget"
+				id="load.Average"
+			>
+				Waiting
+			</div>
+		</div>
+	</div>
+</div>

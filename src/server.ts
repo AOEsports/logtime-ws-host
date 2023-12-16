@@ -14,6 +14,9 @@ let LAST_DATA_SENT: any = {};
 // Key WebSocket Map
 let GameClientWS: ServerWebSocket<any> | null = null;
 let ReceivingDataConnections: ServerWebSocket<any>[] = [];
+let KeepAliveInterval: Timer | null = null;
+let KeepAlivePongTracker: Timer | null = null;
+let LastGCWSPongTime = Date.now();
 
 const server = Bun.serve({
 	development: true,
@@ -33,11 +36,58 @@ const server = Bun.serve({
 			const fileName = url.pathname.split("/public/")[1];
 			return new Response(Bun.file("./src/public/" + fileName));
 		}
-		const header = Bun.file("./src/public/head.html");
-		const headerText = await header.text();
+		const header = Bun.file("./src/public/templates/head.html");
+		let headerText = await header.text();
+
+		const topbarTemplate = Bun.file("./src/public/templates/topbar.html");
+		const topbarText = await topbarTemplate.text();
+		headerText = headerText.replace("%TOPBAR%", topbarText);
+
+		const navbarTemplate = Bun.file("./src/public/templates/navbar.html");
+		const navbarText = await navbarTemplate.text();
+		headerText = headerText.replace("%NAVBAR%", navbarText);
+
 		if (url.pathname == "/player") {
 			const players = await Bun.file("./src/public/player.html").text();
-			const returnPage = headerText.replace("%BODY%", players);
+			const returnPage = headerText
+				.replace("%BODY%", players)
+				.replace("%PAGE%", "playerinfo");
+			return new Response(returnPage, {
+				headers: { "Content-Type": "text/html" },
+			});
+		}
+
+		if (url.pathname == "/matchinfo") {
+			const players = await Bun.file(
+				"./src/public/matchinfo.html"
+			).text();
+			const returnPage = headerText
+				.replace("%BODY%", players)
+				.replace("%PAGE%", "matchinfo");
+			return new Response(returnPage, {
+				headers: { "Content-Type": "text/html" },
+			});
+		}
+
+		if (url.pathname == "/serverload") {
+			const players = await Bun.file(
+				"./src/public/serverload.html"
+			).text();
+			const returnPage = headerText
+				.replace("%BODY%", players)
+				.replace("%PAGE%", "serverload");
+			return new Response(returnPage, {
+				headers: { "Content-Type": "text/html" },
+			});
+		}
+
+		if (url.pathname == "/parserload") {
+			const players = await Bun.file(
+				"./src/public/parserload.html"
+			).text();
+			const returnPage = headerText
+				.replace("%BODY%", players)
+				.replace("%PAGE%", "parserload");
 			return new Response(returnPage, {
 				headers: { "Content-Type": "text/html" },
 			});
@@ -49,7 +99,9 @@ const server = Bun.serve({
 		const index = Bun.file("./src/public/index.html");
 		const indexText = await index.text();
 
-		const returnPage = headerText.replace("%BODY%", indexText);
+		const returnPage = headerText
+			.replace("%BODY%", indexText)
+			.replace("%PAGE%", "home");
 
 		return new Response(returnPage, {
 			headers: { "Content-Type": "text/html" },
@@ -73,8 +125,16 @@ const server = Bun.serve({
 		},
 		async message(ws, message: string) {
 			const parsed = JSON.parse(message);
+			if (parsed.type == "pong" && ws == GameClientWS) {
+				LastGCWSPongTime = Date.now();
+				return;
+			}
 			if (parsed.type == "ping") {
 				ws.send(JSON.stringify({ type: "pong" }));
+				return;
+			}
+			if (parsed.type == "requestLog") {
+				ws.send(JSON.stringify({ type: "requestLog", data: CURRENT }));
 				return;
 			}
 			if (parsed.type == "init") {
@@ -83,6 +143,40 @@ const server = Bun.serve({
 				if (parsed.id == "gameclient") {
 					GameClientWS = ws;
 					console.log(`Registered gameclient from IP`, ip);
+					// setup keepalive
+					if (KeepAliveInterval) {
+						clearInterval(KeepAliveInterval);
+					}
+					KeepAliveInterval = setInterval(() => {
+						if (!GameClientWS) {
+							return;
+						}
+						GameClientWS.send(JSON.stringify({ type: "ping" }));
+					}, 2000);
+					if (KeepAlivePongTracker) {
+						clearInterval(KeepAlivePongTracker);
+					}
+					LastGCWSPongTime = Date.now();
+					KeepAlivePongTracker = setInterval(() => {
+						if (!GameClientWS) {
+							return;
+						}
+						if (Date.now() - LastGCWSPongTime > 10000) {
+							console.error(`GameClient timed out`);
+							try {
+								GameClientWS.close();
+							} catch (e) {}
+
+							// send notice to other clients
+							for (const dataConnection of ReceivingDataConnections) {
+								dataConnection.send(
+									JSON.stringify({
+										type: "gameclientTimeout",
+									})
+								);
+							}
+						}
+					}, 1000);
 				}
 				if (parsed.id == "data") {
 					ReceivingDataConnections.push(ws);
@@ -135,7 +229,8 @@ const server = Bun.serve({
 					return;
 				}
 				if (parsed.msg == "lines") {
-					const { lineCount, matchLines, fileName } = parsed;
+					const { lineCount, matchLines, fileName, totalLineCount } =
+						parsed;
 
 					// if we already have a filename, confirm that theyre the same
 					if (CURRENT.fileName && CURRENT.fileName != fileName) {
@@ -149,7 +244,11 @@ const server = Bun.serve({
 
 					// check that matchLines and lineCount match
 					if (matchLines.length != lineCount) {
-						console.error("line count mismatch");
+						console.error(
+							"line count mismatch x1",
+							matchLines.length,
+							lineCount
+						);
 						return;
 					}
 					// append matchLines to CURRENT.lines
@@ -157,9 +256,21 @@ const server = Bun.serve({
 						fileName,
 						lines: [...CURRENT.lines, ...matchLines],
 					};
+					// check that CURRENT.lines.length == lineCount
+					if (CURRENT.lines.length != totalLineCount) {
+						console.error(
+							"line count mismatch x2",
+							CURRENT.lines.length,
+							totalLineCount
+						);
+						return;
+					}
 					console.log(
 						`Saved ${lineCount} lines for ${fileName}`,
-						CURRENT.lines.length
+						CURRENT.lines.length,
+						totalLineCount,
+						// most recent line
+						CURRENT.lines[CURRENT.lines.length - 1]
 					);
 					const startTime = Date.now();
 					const parsedObj = scrimCsvToObjArray(CURRENT.lines);

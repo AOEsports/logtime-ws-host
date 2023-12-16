@@ -10,57 +10,69 @@
 		if (heroName == "Wrecking Ball") return "WreckingBall";
 		return heroName;
 	}
+	function parseData(key, value) {
+		if (key == "hero")
+			return `<image width="32px" src="/public/imgs/${fixHeroName(
+				value
+			)}.png"/>`;
+		return value;
+	}
 
-	function loadPlayer(playerData, playerName) {
+	function loadPlayer(playerData, playerName, round) {
 		const playerTemplate = document.getElementById("playerTemplate");
 		const playerTable = document.getElementById("playerTable");
+		console.log(playerData, round)
 		const keys = Object.keys(playerData);
 		for (const playerNameLoad of keys) {
-			console.log(playerNameLoad, playerName)
 			if (playerNameLoad != playerName) continue;
-			const player = playerData[playerNameLoad];
-			console.log(player)
+			const playerFoundData = playerData[playerNameLoad];
+			// find the amount of rounds
+			const rounds = Object.keys(playerFoundData).length;
+			// update the round select
+			const roundSelect = document.getElementById("roundSelect");
+			roundSelect.innerHTML = "";
+			for (let i = 1; i <= rounds; i++) {
+				const option = document.createElement("option");
+				option.value = i;
+				option.innerHTML = i;
+				if (i == round) option.selected = true;
+				roundSelect.appendChild(option);
+			}
+			// update the table
+
+
+
+			const player = playerFoundData[round];
 			const playerRow = playerTemplate.cloneNode(true);
 			playerRow.id = player.hero;
 			// set data-isPlayer to true
 			playerRow.setAttribute("data-isPlayer", true);
 			playerRow.style.display = "table-row";
 
-			playerRow.querySelector("[data-type=view]").innerHTML =
-				'<a href="/player?player=' +
-				player.playerName +
-				'">View</a>';
+			const playerDataKeys = Object.keys(player);
+			for (const pdKey in playerDataKeys) {
+				// querySelector for the data-type, and update the stuff in it
+				const pdKeyString = playerDataKeys[pdKey];
+				const pdValue = player[pdKeyString];
 
-			playerRow.querySelector(
-				"[data-type=hero]"
-			).innerHTML = `<image width="32px" src="/public/imgs/${fixHeroName(
-				player.hero
-			)}.png"/>`;
-			
-			playerRow.querySelector("[data-type=damageDealt]").innerHTML =
-				player.playerFullHeroDamage
-					? Math.round(player.playerFullHeroDamage)
-					: 0;
-			playerRow.querySelector("[data-type=damageReceived]").innerHTML =
-				player.damageReceived ? Math.round(player.damageReceived) : 0;
-			playerRow.querySelector("[data-type=healingGiven]").innerHTML =
-				player.healingGiven ? Math.round(player.healingGiven) : 0;
-			playerRow.querySelector("[data-type=healingReceived]").innerHTML =
-				player.healingReceived ? Math.round(player.healingReceived) : 0;
-			playerRow.querySelector("[data-type=dmgmit]").innerHTML =
-				player.damageMitigated ? Math.round(player.damageMitigated) : 0;
-			playerRow.querySelector("[data-type=deaths]").innerHTML =
-				player.deaths ? player.deaths : 0;
-			playerRow.querySelector("[data-type=eliminations]").innerHTML =
-				player.eliminations ? player.eliminations : 0;
-			playerRow.querySelector("[data-type=finalBlows]").innerHTML =
-				player.kills ? player.kills : 0;
-			playerRow.querySelector("[data-type=ultsUsed]").innerHTML =
-				player.ultsUsed ? player.ultsUsed : 0;
-			// find the old row and replace it
+				try {
+					const parsedValue = parseData(pdKeyString, pdValue);
+					// check if pdValue can be parsed as a number
+					if (!isNaN(parsedValue)) {
+						// if it can, round it
+						playerRow.querySelector(
+							`[data-type=${pdKeyString}]`
+						).innerHTML = Math.round(parsedValue);
+						continue;
+					}
+					playerRow.querySelector(
+						`[data-type=${pdKeyString}]`
+					).innerHTML = parsedValue;
+				} catch (e) {}
+			}
 			const oldRow = document.getElementById(player.hero);
 			if (oldRow) {
-				playerTable.replaceChild(playerRow, oldRow);
+				smoothReplace(oldRow, playerRow);
 			} else playerTable.appendChild(playerRow);
 		}
 	}
@@ -71,6 +83,10 @@
 		// get search params
 		const urlParams = new URLSearchParams(window.location.search);
 		const playerName = urlParams.get("player");
+		let round = urlParams.has("round") ? parseInt(urlParams.get("round")) : 1;
+		if (round < 1) round = 1;
+
+		$('[data-type="playerName"]').text(playerName).text();
 
 		const CurrentMatchId = parsedData.parser_load.fileName
 			.replace("Log-", "")
@@ -82,255 +98,83 @@
 			document.getElementById("playerTable").innerHTML = "";
 			document.getElementById("playerTable").appendChild(playerTemplate);
 		}
-
-		loadPlayer(data.player_stats, playerName);
-
-		document.getElementById("load.Map").innerHTML =
-			data.matchInformation.map;
-		document.getElementById("load.MapMode").innerHTML =
-			data.matchInformation.mode;
-		document.getElementById(
-			"load.MapModeImage"
-		).src = `/public/imgs/${data.matchInformation.mode}.webp`;
-		document.getElementById("load.Team1").innerHTML =
-			data.matchInformation.team_1;
-		document.getElementById("load.Team2").innerHTML =
-			data.matchInformation.team_2;
-		document.getElementById("load.RoundStatus").innerHTML =
-			data.round_status;
-
-		const serverLoad = data.server_load;
-		document.getElementById("load.Current").innerHTML = serverLoad.current;
-		document.getElementById("load.Peak").innerHTML = serverLoad.peak;
-		document.getElementById("load.Average").innerHTML = serverLoad.average;
-
-		const parserLoad = parsedData.parser_load;
-		document.getElementById("parser.ConnectionCount").innerHTML =
-			parserLoad.totalConnections;
-
-		document.getElementById("parser.Lines").innerHTML =
-			parserLoad.lineCount;
-
-		document.getElementById(
-			"parser.ParseTime"
-		).innerHTML = `${parserLoad.parseTime}ms`;
-
-		document.getElementById("parser.CurrentFile").innerHTML =
-			parserLoad.fileName.replace("Log-", "").replace(".txt", "");
+		loadPlayer(data.player_stats, playerName, round);
 	}
+	
+	function updateRound(e) {
+		// select object onchange. find the new value
+		const round = e.value;
+		// update the url
+		const urlParams = new URLSearchParams(window.location.search);
+		urlParams.set("round", round);
+		// reload the page
+		window.location.search = urlParams.toString();
+
+		
+	}
+	showTab('playerinfo')
+
 </script>
-<div class="mui-appbar mui-container-fluid" style="margin-bottom: 2rem">
-	<div class="mui--text-display2 mui-row">
-		<span
-			class="mui-col-md-2"
-			style="
-				padding-right: 4rem;
-				padding-left: 2rem;
-				padding-top: 0.2rem;
-				display: inline-block;
-			"
-		>
-			<image src="/favicon.png" height="48px" />
-		</span>
-		<span class="mui-col-md-4">LogTime WS Viewer</span>
-		<span
-			class="mui--text-right mui-col-md-6 mui--text-body2"
-			style="padding-right: 2px"
-		>
-			<button
-				onclick="connectToWebSocket()"
-				class="mui-btn mui-btn--accent mui-btn--small"
-			>
-				Reconnect
-			</button>
-			Connections
-			<span class="dataTarget" id="parser.ConnectionCount">
-				Waiting
-			</span>
-		</span>
+<div class="mui-tabs__pane mui--is-active" id="ow-players-info">
+	<div class="playerTitle">
+		<div class="mui--text-display2">
+			Player Information for
+			<span data-type="playerName">LOADING</span>
+		</div>
+		<div id="roundSelectDiv">
+			<label for="roundSelect">Select Round</label>
+			<select id="roundSelect" onchange="updateRound(this)">
+				<option value="LOADING" disabled selected>LOADING</option>
+			</select>
+		</div>
 	</div>
-</div>
-<div class="mui-container">
-	<div class="mui-panel">
-		<ul class="mui-tabs__bar">
-			<li class="mui--is-active">
-				<a data-mui-toggle="tab" data-mui-controls="ow-players-info">
-					Players
-				</a>
-			</li>
-			<li>
-				<a data-mui-toggle="tab" data-mui-controls="ow-match-info">
-					Match Information
-				</a>
-			</li>
-			<li>
-				<a data-mui-toggle="tab" data-mui-controls="ow-server-load">
-					Server Load
-				</a>
-			</li>
-			<li>
-				<a data-mui-toggle="tab" data-mui-controls="parser-server-load">
-					Parser Server Load
-				</a>
-			</li>
-		</ul>
-		<div class="mui-tabs__pane mui--is-active" id="ow-players-info">
-			<div class="mui--text-display2">Live Information</div>
-			<div class="mui--text-body1">
-				<table class="mui-table mui-table--bordered">
-					<thead>
-						<tr>
-							<th>Hero</th>
-							<th>Final Blows (Elims)</th>
-							<th>Deaths</th>
-							<th>Dmg. Dealt</th>
-							<th>Dmg. Received</th>
-							<th>Heal. Done</th>
-							<th>Heal. Received</th>
-							<th>Dmg. Mitigated</th>
-							<th>Ults. Used</th>
-							<th></th>
-						</tr>
-					</thead>
-					<tbody id="playerTable">
-						<tr id="playerTemplate" style="display: none">
-							<td data-type="hero">
-								<image
-									width="32px"
-									src="/public/imgs/Tracer.png"
-								/>
-							</td>
-							<td>
-								<span data-type="finalBlows">0</span>
-								(<span data-type="eliminations">0</span>)
-							</td>
-							<td data-type="deaths">0</td>
-							<td data-type="damageDealt">0</td>
-							<td data-type="damageReceived">0</td>
-							<td data-type="healingGiven">0</td>
-							<td data-type="healingReceived">0</td>
-							<td data-type="dmgmit">0</td>
-							<td data-type="ultsUsed">0</td>
-							<td data-type="view">View</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
-		</div>
-		<div class="mui-tabs__pane" id="ow-match-info">
-			<div class="mui--text-display2">Overwatch Match Information</div>
-			<div class="mui--text-body1 mui-row">
-				<div class="mui--text-display1 mui-col-md-4">
-					Map
-					<div class="mui--text-headline dataTarget" id="load.Map">
-						Waiting
-					</div>
-				</div>
-
-				<div class="mui--text-display1 mui-col-md-4">
-					Team 1
-					<div class="mui--text-headline dataTarget" id="load.Team1">
-						Waiting
-					</div>
-				</div>
-				<div class="mui--text-display1 mui-col-md-4">
-					Team 2
-					<div class="mui--text-headline dataTarget" id="load.Team2">
-						Waiting
-					</div>
-				</div>
-				<div class="mui--text-display1 mui-col-md-4">
-					Mode
-					<div>
+	<div class="mui--text-body1">
+		<table class="mui-table mui-table--bordered">
+			<thead>
+				<tr>
+					<th>Hero</th>
+					<th title="Final Blows">F.B</th>
+					<th>Elims</th>
+					<th>Deaths</th>
+					<th title="Damage Dealt">Dmg.D</th>
+					<th title="Damage Received">Dmg.R</th>
+					<th title="Healing Done">Heal.D</th>
+					<th title="Healing Received">Heal.R</th>
+					<th title="Ult Count">Ult.C</th>
+				</tr>
+			</thead>
+			<tbody id="playerTable">
+				<tr id="playerTemplate" style="display: none">
+					<td data-type="hero">
 						<image
-							src="/public/imgs/Assault.webp"
 							width="32px"
-							style="display: inline"
-							id="load.MapModeImage"
+							src="/public/imgs/Tracer.png"
 						/>
-						<div
-							class="mui--text-headline dataTarget"
-							id="load.MapMode"
-							style="display: inline"
-						>
-							Waiting
-						</div>
-					</div>
-				</div>
-
-				<div class="mui--text-display1 mui-col-md-4">
-					Round Status
-					<div
-						class="mui--text-headline dataTarget"
-						id="load.RoundStatus"
+					</td>
+					<td data-type="final_blows" title="Final Blows">0</td>
+					<td data-type="eliminations">0</td>
+					<td data-type="deaths">0</td>
+					<td title="Damage Dealt" data-type="damageDealt">
+						0
+					</td>
+					<td
+						title="Damage Received"
+						data-type="damageReceived"
 					>
-						Waiting
-					</div>
-				</div>
-
-				<div class="mui--text-display1 mui-col-md-4">
-					Match ID
-					<div
-						class="mui--text-headline dataTarget"
-						id="parser.CurrentFile"
+						0
+					</td>
+					<td title="Healing Done" data-type="healingGiven">
+						0
+					</td>
+					<td
+						title="Healing Received"
+						data-type="healingReceived"
 					>
-						Waiting
-					</div>
-				</div>
-			</div>
-		</div>
-		<div class="mui-tabs__pane" id="ow-server-load">
-			<div class="mui--text-display2">Overwatch Server Load</div>
-			<div class="mui--text-body1 mui-row">
-				<div class="mui--text-display1 mui-col-md-4">
-					Current
-					<div
-						class="mui--text-headline dataTarget"
-						id="load.Current"
-					>
-						Waiting
-					</div>
-				</div>
-
-				<div class="mui--text-display1 mui-col-md-4">
-					Peak
-					<div class="mui--text-headline dataTarget" id="load.Peak">
-						Waiting
-					</div>
-				</div>
-				<div class="mui--text-display1 mui-col-md-4">
-					Average
-					<div
-						class="mui--text-headline dataTarget"
-						id="load.Average"
-					>
-						Waiting
-					</div>
-				</div>
-			</div>
-		</div>
-		<div class="mui-tabs__pane" id="parser-server-load">
-			<div class="mui--text-display2">Parser Server Load</div>
-			<div class="mui--text-body1 mui-row">
-				<div class="mui--text-display1 mui-col-md-4">
-					Lines
-					<div
-						class="mui--text-headline dataTarget"
-						id="parser.Lines"
-					>
-						Waiting
-					</div>
-				</div>
-				<div class="mui--text-display1 mui-col-md-4">
-					Last Time to Parse
-					<div
-						class="mui--text-headline dataTarget"
-						id="parser.ParseTime"
-					>
-						Waiting
-					</div>
-				</div>
-			</div>
-		</div>
+						0
+					</td>
+					<td title="Ult Count" data-type="ultsUsed">0</td>
+				</tr>
+			</tbody>
+		</table>
 	</div>
 </div>

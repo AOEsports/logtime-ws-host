@@ -1,0 +1,60 @@
+<head>
+	<title>Overwatch Stats - Viewer</title>
+	<link
+		href="//cdn.muicss.com/mui-0.10.3/extra/mui-rem.min.css"
+		rel="stylesheet"
+		type="text/css"
+	/>
+	<link
+		href="//cdn.muicss.com/mui-0.10.3/extra/mui-colors.min.css"
+		rel="stylesheet"
+		type="text/css"
+	/>
+	<link
+		href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.css"
+		rel="stylesheet"
+		type="text/css"
+	/>
+
+	<script
+		src="//code.jquery.com/jquery-3.7.1.min.js"
+		integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+		crossorigin="anonymous"
+	></script>
+
+	<link rel="stylesheet" href="public/style.css" />
+	<link rel="icon" type="image/png" href="/favicon.png" />
+	<script src="//cdn.muicss.com/mui-0.10.3/extra/mui-combined.min.js"></script>
+
+	<script src="//cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js"></script>
+
+	<script src="public/websocket.js"></script>
+	<script src="public/shared.js"></script>
+	<meta charset="utf-8" />
+	<script>
+		toastr.options = {
+			closeButton: false,
+			debug: false,
+			newestOnTop: false,
+			progressBar: false,
+			positionClass: "toast-bottom-right",
+			preventDuplicates: false,
+			onclick: null,
+			showDuration: "300",
+			hideDuration: "1000",
+			timeOut: "5000",
+			extendedTimeOut: "1000",
+			showEasing: "swing",
+			hideEasing: "linear",
+			showMethod: "fadeIn",
+			hideMethod: "fadeOut",
+		};
+	</script>
+</head>
+<body onload="connectToWebSocket()" style="color-scheme: dark">
+	%TOPBAR%
+	<div class="mui-container">
+		<div class="mui-panel">%NAVBAR%
+			%BODY%</div>
+	</div>
+</body>

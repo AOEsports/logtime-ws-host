@@ -2,6 +2,7 @@
 	let CurrentMatchID = "";
 
 	function fixHeroName(heroName) {
+		if (heroName == "") return "TrainingBot";
 		if (heroName == "Junker Queen") return "Junkerqueen";
 		if (heroName == "Soldier: 76") return "Soldier76";
 		if (heroName == "D.Va") return "DVa";
@@ -11,58 +12,79 @@
 		return heroName;
 	}
 
-	function loadPlayers(playerData) {
+	function parseData(key, value) {
+		if (key == "hero")
+			return `<image width="32px" src="/public/imgs/${fixHeroName(
+				value
+			)}.png"/>`;
+		if (key == "is_alive") {
+			if (value == true) return "YES";
+			else return "NO";
+		}
+		if (key == "weapon_accuracy") {
+			return `${Math.round(parseFloat(value) * 100)}%`;
+		}
+		return value;
+	}
+
+	function loadPlayers(playerData, team1, team2) {
 		const playerTemplate = document.getElementById("playerTemplate");
-		const playerTable = document.getElementById("playerTable");
 		for (const player of Object.values(playerData)) {
 			const playerRow = playerTemplate.cloneNode(true);
+			// determine if player is Team 1 or Team 2
+			let team = "team1";
+			if (player.team == team1) {
+				playerRow.setAttribute("data-team", "team1");
+				team = "team1";
+			} else if (player.team == team2) {
+				playerRow.setAttribute("data-team", "team2");
+				team = "team2";
+			} 
+			
+			const playerTable = document.getElementById(`playerTable-${team}`);
+
 			playerRow.id = player.playerName;
 			// set data-isPlayer to true
 			playerRow.setAttribute("data-isPlayer", true);
 			playerRow.style.display = "table-row";
 
-
 			playerRow.querySelector("[data-type=view]").innerHTML =
-				'<a href="/player?player=' +
+				'<a style="cursor: pointer;" href="/player?player=' +
 				player.playerName +
 				'">View</a>';
 
-			playerRow.querySelector("[data-type=playerName]").innerHTML =
-				player.playerName;
-			playerRow.querySelector(
-				"[data-type=hero]"
-			).innerHTML = `<image width="32px" src="/public/imgs/${fixHeroName(
-				player.hero
-			)}.png"/>`;
-			playerRow.querySelector("[data-type=damageDealt]").innerHTML =
-				player.playerFullHeroDamage
-					? Math.round(player.playerFullHeroDamage)
-					: 0;
-			playerRow.querySelector("[data-type=damageReceived]").innerHTML =
-				player.damageReceived ? Math.round(player.damageReceived) : 0;
-			playerRow.querySelector("[data-type=healingGiven]").innerHTML =
-				player.healingGiven ? Math.round(player.healingGiven) : 0;
-			playerRow.querySelector("[data-type=healingReceived]").innerHTML =
-				player.healingReceived ? Math.round(player.healingReceived) : 0;
-			playerRow.querySelector("[data-type=deaths]").innerHTML =
-				player.deaths ? player.deaths : 0;
-			playerRow.querySelector("[data-type=eliminations]").innerHTML =
-				player.eliminations ? player.eliminations : 0;
-			playerRow.querySelector("[data-type=finalBlows]").innerHTML =
-				player.kills ? player.kills : 0;
-			playerRow.querySelector("[data-type=ultsUsed]").innerHTML =
-				player.ultsUsed ? player.ultsUsed : 0;
+			const playerDataKeys = Object.keys(player);
+			for (const pdKey in playerDataKeys) {
+				// querySelector for the data-type, and update the stuff in it
+				const pdKeyString = playerDataKeys[pdKey];
+				const pdValue = player[pdKeyString];
+
+				try {
+					const parsedValue = parseData(pdKeyString, pdValue);
+					// check if pdValue can be parsed as a number
+					if (!isNaN(parsedValue)) {
+						// if it can, round it
+						playerRow.querySelector(
+							`[data-type=${pdKeyString}]`
+						).innerHTML = Math.round(parsedValue);
+						continue;
+					}
+					playerRow.querySelector(
+						`[data-type=${pdKeyString}]`
+					).innerHTML = parsedValue;
+				} catch (e) {}
+			}
+
 			// find the old row and replace it
 			const oldRow = document.getElementById(player.playerName);
 			if (oldRow) {
-				playerTable.replaceChild(playerRow, oldRow);
+				smoothReplace(oldRow, playerRow);
 			} else playerTable.appendChild(playerRow);
 		}
 	}
 
 	function passData(parsedData) {
 		const data = parsedData.data;
-		console.log(parsedData);
 
 		const CurrentMatchId = parsedData.parser_load.fileName
 			.replace("Log-", "")
@@ -71,258 +93,99 @@
 		if (CurrentMatchId != CurrentMatchID) {
 			CurrentMatchID = CurrentMatchId;
 			const playerTemplate = document.getElementById("playerTemplate");
-			document.getElementById("playerTable").innerHTML = "";
-			document.getElementById("playerTable").appendChild(playerTemplate);
+			document.getElementById("playerTable-team1").innerHTML = "";
+			document.getElementById("playerTable-team2").innerHTML = "";
+			document.getElementById("playerTable-team1").appendChild(playerTemplate);
+			toastr.info(`Reset stats for new match`);
 		}
+		const team1name = data.matchInformation.team_1;
+		const team2name = data.matchInformation.team_2;
+		$("#team1name").text(team1name);
+		$("#team2name").text(team2name);
 
-		loadPlayers(data.players);
-
-		document.getElementById("load.Map").innerHTML =
-			data.matchInformation.map;
-		document.getElementById("load.MapMode").innerHTML =
-			data.matchInformation.mode;
-		document.getElementById(
-			"load.MapModeImage"
-		).src = `/public/imgs/${data.matchInformation.mode}.webp`;
-		document.getElementById("load.Team1").innerHTML =
-			data.matchInformation.team_1;
-		document.getElementById("load.Team2").innerHTML =
-			data.matchInformation.team_2;
-		document.getElementById("load.RoundStatus").innerHTML =
-			data.round_status;
-
-		const serverLoad = data.server_load;
-		document.getElementById("load.Current").innerHTML = serverLoad.current;
-		document.getElementById("load.Peak").innerHTML = serverLoad.peak;
-		document.getElementById("load.Average").innerHTML = serverLoad.average;
-
-		const parserLoad = parsedData.parser_load;
-		document.getElementById("parser.ConnectionCount").innerHTML =
-			parserLoad.totalConnections;
-
-		document.getElementById("parser.Lines").innerHTML =
-			parserLoad.lineCount;
-
-		document.getElementById(
-			"parser.ParseTime"
-		).innerHTML = `${parserLoad.parseTime}ms`;
-
-		document.getElementById("parser.CurrentFile").innerHTML =
-			parserLoad.fileName.replace("Log-", "").replace(".txt", "");
+		loadPlayers(data.better_player_stats, team1name, team2name);
 	}
 </script>
-<div class="mui-appbar mui-container-fluid" style="margin-bottom: 2rem">
-	<div class="mui--text-display2 mui-row">
-		<span
-			class="mui-col-md-2"
-			style="
-				padding-right: 4rem;
-				padding-left: 2rem;
-				padding-top: 0.2rem;
-				display: inline-block;
-			"
-		>
-			<image src="/favicon.png" height="48px" />
-		</span>
-		<span class="mui-col-md-4">LogTime WS Viewer</span>
-		<span
-			class="mui--text-right mui-col-md-6 mui--text-body2"
-			style="padding-right: 2px"
-		>
-			<button
-				onclick="connectToWebSocket()"
-				class="mui-btn mui-btn--accent mui-btn--small"
-			>
-				Reconnect
-			</button>
-			Connections
-			<span class="dataTarget" id="parser.ConnectionCount">
-				Waiting
-			</span>
-		</span>
-	</div>
-</div>
-<div class="mui-container">
-	<div class="mui-panel">
-		<ul class="mui-tabs__bar">
-			<li class="mui--is-active">
-				<a data-mui-toggle="tab" data-mui-controls="ow-players-info">
-					Players
-				</a>
-			</li>
-			<li>
-				<a data-mui-toggle="tab" data-mui-controls="ow-match-info">
-					Match Information
-				</a>
-			</li>
-			<li>
-				<a data-mui-toggle="tab" data-mui-controls="ow-server-load">
-					Server Load
-				</a>
-			</li>
-			<li>
-				<a data-mui-toggle="tab" data-mui-controls="parser-server-load">
-					Parser Server Load
-				</a>
-			</li>
-		</ul>
-		<div class="mui-tabs__pane mui--is-active" id="ow-players-info">
-			<div class="mui--text-display2">Live Information</div>
-			<div class="mui--text-body1">
-				<table class="mui-table mui-table--bordered">
-					<thead>
-						<tr>
-							<th>Player</th>
-							<th>Current Hero</th>
-							<th>Final Blows (Elims)</th>
-							<th>Deaths</th>
-							<th>Dmg. Dealt</th>
-							<th>Dmg. Received</th>
-							<th>Heal. Done</th>
-							<th>Heal. Received</th>
-							<th>Ults. Used</th>
-							<th></th>
-						</tr>
-					</thead>
-					<tbody id="playerTable">
-						<tr id="playerTemplate" style="display: none">
-							<td data-type="playerName">LenaOxt0n</td>
-							<td data-type="hero">
-								<image
-									width="32px"
-									src="/public/imgs/Tracer.png"
-								/>
-							</td>
-							<td>
-								<span data-type="finalBlows">0</span>
-								(<span data-type="eliminations">0</span>)
-							</td>
-							<td data-type="deaths">0</td>
-							<td data-type="damageDealt">0</td>
-							<td data-type="damageReceived">0</td>
-							<td data-type="healingGiven">0</td>
-							<td data-type="healingReceived">0</td>
-							<td data-type="ultsUsed">0</td>
-							<td data-type="view">View</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
-		</div>
-		<div class="mui-tabs__pane" id="ow-match-info">
-			<div class="mui--text-display2">Overwatch Match Information</div>
-			<div class="mui--text-body1 mui-row">
-				<div class="mui--text-display1 mui-col-md-4">
-					Map
-					<div class="mui--text-headline dataTarget" id="load.Map">
-						Waiting
-					</div>
-				</div>
 
-				<div class="mui--text-display1 mui-col-md-4">
-					Team 1
-					<div class="mui--text-headline dataTarget" id="load.Team1">
-						Waiting
-					</div>
-				</div>
-				<div class="mui--text-display1 mui-col-md-4">
-					Team 2
-					<div class="mui--text-headline dataTarget" id="load.Team2">
-						Waiting
-					</div>
-				</div>
-				<div class="mui--text-display1 mui-col-md-4">
-					Mode
-					<div>
-						<image
-							src="/public/imgs/Assault.webp"
-							width="32px"
-							style="display: inline"
-							id="load.MapModeImage"
-						/>
-						<div
-							class="mui--text-headline dataTarget"
-							id="load.MapMode"
-							style="display: inline"
-						>
-							Waiting
-						</div>
-					</div>
-				</div>
-
-				<div class="mui--text-display1 mui-col-md-4">
-					Round Status
-					<div
-						class="mui--text-headline dataTarget"
-						id="load.RoundStatus"
-					>
-						Waiting
-					</div>
-				</div>
-
-				<div class="mui--text-display1 mui-col-md-4">
-					Match ID
-					<div
-						class="mui--text-headline dataTarget"
-						id="parser.CurrentFile"
-					>
-						Waiting
-					</div>
-				</div>
-			</div>
-		</div>
-		<div class="mui-tabs__pane" id="ow-server-load">
-			<div class="mui--text-display2">Overwatch Server Load</div>
-			<div class="mui--text-body1 mui-row">
-				<div class="mui--text-display1 mui-col-md-4">
-					Current
-					<div
-						class="mui--text-headline dataTarget"
-						id="load.Current"
-					>
-						Waiting
-					</div>
-				</div>
-
-				<div class="mui--text-display1 mui-col-md-4">
-					Peak
-					<div class="mui--text-headline dataTarget" id="load.Peak">
-						Waiting
-					</div>
-				</div>
-				<div class="mui--text-display1 mui-col-md-4">
-					Average
-					<div
-						class="mui--text-headline dataTarget"
-						id="load.Average"
-					>
-						Waiting
-					</div>
-				</div>
-			</div>
-		</div>
-		<div class="mui-tabs__pane" id="parser-server-load">
-			<div class="mui--text-display2">Parser Server Load</div>
-			<div class="mui--text-body1 mui-row">
-				<div class="mui--text-display1 mui-col-md-4">
-					Lines
-					<div
-						class="mui--text-headline dataTarget"
-						id="parser.Lines"
-					>
-						Waiting
-					</div>
-				</div>
-				<div class="mui--text-display1 mui-col-md-4">
-					Last Time to Parse
-					<div
-						class="mui--text-headline dataTarget"
-						id="parser.ParseTime"
-					>
-						Waiting
-					</div>
-				</div>
-			</div>
-		</div>
+<div>
+		
+	
+	<div class="mui--text-display2">Live Information</div>
+	<div class="mui--text-body1">
+		<div class="mui--text-display1" id="team1name">Team 1</div>
+		<table class="mui-table mui-table--bordered" id="team1">
+			<thead>
+				<tr>
+					<th>Player</th>
+					<th>Hero</th>
+					<th title="Final Blows">F.B</th>
+					<th>Elims</th>
+					<th>Deaths</th>
+					<th title="Solo Kills">S.K</th>
+					<th title="Damage Dealt">Dmg.D</th>
+					<th title="Damage Received">Dmg.R</th>
+					<th title="Damage Blocked (w/ a Shield)">Dmg.B</th>
+					<th title="Healing Done">Heal.D</th>
+					<th title="Ults Used">Ult.U</th>
+					<th title="Ult Percentage">Ult %</th>
+					<th title="Weapon Accurate">Wep. Acc</th>
+					<th title="Alive/Dead">ALIVE</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody id="playerTable-team1">
+				<tr id="playerTemplate" style="display: none">
+					<td data-type="playerName">LenaOxt0n</td>
+					<td data-type="hero">
+						<image width="32px" src="/public/imgs/Tracer.png" />
+					</td>
+					<td data-type="final_blows" title="Final Blows">0</td>
+					<td data-type="eliminations">0</td>
+					<td data-type="deaths">0</td>
+					<td data-type="solo_kills">0</td>
+					<td title="Damage Dealt" data-type="hero_damage">
+						0
+					</td>
+					<td title="Damage Received" data-type="damage_received">
+						0
+					</td>
+					<td title="Damage Mitigated" data-type="damage_mitigated">
+						0
+					</td>
+					<td title="Healing Done" data-type="healing_dealt">0</td>
+					<td title="Ult Count" data-type="ults_used">0</td>
+					<td title="Ult Percentage" data-type="ult_percentage">0%</td>
+					<td title="Weapon Accuracy" data-type="weapon_accuracy">0%</td>
+					<td data-type="is_alive">YES</td>
+					<td data-type="view" style="text-decoration: underline">
+						View
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<div class="mui--text-display1" id="team2name">Team 2</div>
+		<table class="mui-table mui-table--bordered" id="team2">
+			<thead>
+				<tr>
+					<th>Player</th>
+					<th>Hero</th>
+					<th title="Final Blows">F.B</th>
+					<th>Elims</th>
+					<th>Deaths</th>
+					<th title="Solo Kills">S.K</th>
+					<th title="Damage Dealt">Dmg.D</th>
+					<th title="Damage Received">Dmg.R</th>
+					<th title="Damage Blocked (w/ a Shield)">Dmg.B</th>
+					<th title="Healing Done">Heal.D</th>
+					<th title="Ults Used">Ult.U</th>
+					<th title="Ult Percentage">Ult %</th>
+					<th title="Weapon Accurate">Wep. Acc</th>
+					<th title="Alive/Dead">ALIVE</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody id="playerTable-team2">
+			</tbody>
+		</table>
 	</div>
 </div>

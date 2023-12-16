@@ -1,0 +1,54 @@
+<script>
+	let CurrentMatchID = "";
+
+	function passData(parsedData) {
+		const parserLoad = parsedData.parser_load;
+		document.getElementById("parser.Lines").innerHTML =
+			parserLoad.lineCount;
+
+		document.getElementById(
+			"parser.ParseTime"
+		).innerHTML = `${parserLoad.parseTime}ms`;
+	}
+
+	function loadLogs(logData) {
+		// join with line number
+		$("#lines").text(logData.join("\n"));
+		const lines = logData.map((line, index) => {
+			return `${index + 1}`;
+		});
+		$("#linecount").text(lines.join("\n"));
+		$(".debuglog").show();
+		$(".debuglog").scrollTop($(".debuglog")[0].scrollHeight);
+	}
+</script>
+<div>
+	<div class="mui--text-display2">Parser Server Load</div>
+	<div class="mui--text-body1 mui-row">
+		<div class="mui--text-display1 mui-col-md-4">
+			Lines
+			<div class="mui--text-headline dataTarget" id="parser.Lines">
+				Waiting
+			</div>
+		</div>
+		<div class="mui--text-display1 mui-col-md-4">
+			Last Time to Parse
+			<div class="mui--text-headline dataTarget" id="parser.ParseTime">
+				Waiting
+			</div>
+		</div>
+	</div>
+	<div class="mui--text-display2">
+		DEBUG: View Current Log File
+		<button
+			class="mui-btn mui-btn--accent mui-btn--small"
+			onclick="requestLog()"
+		>
+			Request Log
+		</button>
+	</div>
+	<div style="display: none" class="debuglog">
+		<pre id="linecount"></pre>
+		<pre id="lines"></pre>
+	</div>
+</div>

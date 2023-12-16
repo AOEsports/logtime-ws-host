@@ -1,5 +1,13 @@
 let WebSockerServer = null;
 
+function requestLog() {
+	WebSockerServer.send(
+		JSON.stringify({
+			type: "requestLog",
+		})
+	);
+}
+
 function connectToWebSocket() {
 	if (WebSockerServer) {
 		WebSockerServer.close();
@@ -43,6 +51,9 @@ function connectToWebSocket() {
 	};
 	WebSockerServer.onmessage = function (event) {
 		const parsedData = JSON.parse(event.data);
+		if (parsedData.type == "gameclientTimeout") {
+			toastr.error("GameClient timeout");
+		}
 		if (parsedData.type == "data") {
 			const data = parsedData.data;
 			if (!data.matchInformation) {
@@ -54,7 +65,22 @@ function connectToWebSocket() {
 				}
 				return;
 			}
+			console.log(parsedData.data.better_player_stats);
+			if (
+				parsedData.data.server_load &&
+				parsedData.data.server_load.average &&
+				parsedData.data.server_load.average > 120
+			)
+				toastr.error("AVERAGE SERVER LOAD IS HIGH (> 120)");
+			try {
+				const parserLoad = parsedData.parser_load;
+				document.getElementById("parser.ConnectionCount").innerHTML =
+					parserLoad.totalConnections;
+			} catch (e) {}
 			passData(parsedData);
+		}
+		if (parsedData.type == "requestLog") {
+			loadLogs(parsedData.data.lines);
 		}
 	};
 }

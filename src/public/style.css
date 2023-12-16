@@ -20,3 +20,29 @@ tbody > tr > td {
 tbody > tr:nth-child(odd) {
 	background-color: #272727 !important;
 }
+
+.playerTitle {
+	display: flex;
+	flex-direction: row;
+	gap: 3rem;
+	text-align: center;
+	align-items: center;
+}
+
+.debuglog {
+	max-height: 70vh;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: row;
+	gap: 1rem;
+}
+.debuglog > #linecount {
+	text-align: right;
+	text-decoration: underline;
+}
+
+@media (min-width: 1920px) {
+	.mui-container {
+		max-width: 1920px;
+	}
+}
