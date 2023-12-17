@@ -54,6 +54,24 @@ function connectToWebSocket() {
 		if (parsedData.type == "gameclientTimeout") {
 			toastr.error("GameClient timeout");
 		}
+		if (parsedData.type == "matchEnd" && parsedData.saved) {
+			const matchID = parsedData.matchID;
+			toastr.success(`
+				<div>Match has finished and marked as saved under ID ${matchID}</div>
+				<div><button>
+					<a href="/public/matchCache/${matchID}.json" target="_blank" download>Download File</a>
+				</button></div>
+			`);
+		}
+		if (parsedData.type == "matchSaved") {
+			const matchID = parsedData.matchID;
+			toastr.success(`
+				<div>Match has been saved and marked as saved under ID ${matchID}</div>
+				<div><button>
+					<a href="/public/matchCache/${matchID}.json" target="_blank" download>Download File</a>
+				</button></div>
+			`);
+		}
 		if (parsedData.type == "data") {
 			const data = parsedData.data;
 			if (!data.matchInformation) {

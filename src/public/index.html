@@ -1,5 +1,6 @@
 <script>
 	let CurrentMatchID = "";
+	let LastDataCache = null;
 
 	function fixHeroName(heroName) {
 		if (heroName == "") return "TrainingBot";
@@ -39,8 +40,8 @@
 			} else if (player.team == team2) {
 				playerRow.setAttribute("data-team", "team2");
 				team = "team2";
-			} 
-			
+			}
+
 			const playerTable = document.getElementById(`playerTable-${team}`);
 
 			playerRow.id = player.playerName;
@@ -95,7 +96,9 @@
 			const playerTemplate = document.getElementById("playerTemplate");
 			document.getElementById("playerTable-team1").innerHTML = "";
 			document.getElementById("playerTable-team2").innerHTML = "";
-			document.getElementById("playerTable-team1").appendChild(playerTemplate);
+			document
+				.getElementById("playerTable-team1")
+				.appendChild(playerTemplate);
 			toastr.info(`Reset stats for new match`);
 		}
 		const team1name = data.matchInformation.team_1;
@@ -104,17 +107,40 @@
 		$("#team2name").text(team2name);
 
 		loadPlayers(data.better_player_stats, team1name, team2name);
+		LastDataCache = data;
+	}
+
+	function saveMatch() {
+		if (LastDataCache == null) {
+			toastr.error("No match data to download");
+			return;
+		}
+
+		// ask the websocket to save the match as it is
+		WebSockerServer.send(
+			JSON.stringify({
+				type: "saveMatch",
+			})
+		);
+		toastr.info("Request to save match has been sent.")
 	}
 </script>
 
 <div>
-		
-	
-	<div class="mui--text-display2">Live Information</div>
+	<div class="mui--text-display2">
+		Live Match Information
+
+		<button
+			onclick="saveMatch()"
+			class="mui-btn mui-btn--accent mui-btn--small"
+		>
+			Save Match
+		</button>
+	</div>
 	<div class="mui--text-body1">
 		<div class="mui--text-display1" id="team1name">Team 1</div>
 		<table class="mui-table mui-table--bordered" id="team1">
-			<thead>
+			<thead data-team="team1">
 				<tr>
 					<th>Player</th>
 					<th>Hero</th>
@@ -143,9 +169,7 @@
 					<td data-type="eliminations">0</td>
 					<td data-type="deaths">0</td>
 					<td data-type="solo_kills">0</td>
-					<td title="Damage Dealt" data-type="hero_damage">
-						0
-					</td>
+					<td title="Damage Dealt" data-type="hero_damage">0</td>
 					<td title="Damage Received" data-type="damage_received">
 						0
 					</td>
@@ -154,8 +178,12 @@
 					</td>
 					<td title="Healing Done" data-type="healing_dealt">0</td>
 					<td title="Ult Count" data-type="ults_used">0</td>
-					<td title="Ult Percentage" data-type="ult_percentage">0%</td>
-					<td title="Weapon Accuracy" data-type="weapon_accuracy">0%</td>
+					<td title="Ult Percentage" data-type="ult_percentage">
+						0%
+					</td>
+					<td title="Weapon Accuracy" data-type="weapon_accuracy">
+						0%
+					</td>
 					<td data-type="is_alive">YES</td>
 					<td data-type="view" style="text-decoration: underline">
 						View
@@ -165,7 +193,7 @@
 		</table>
 		<div class="mui--text-display1" id="team2name">Team 2</div>
 		<table class="mui-table mui-table--bordered" id="team2">
-			<thead>
+			<thead data-team="team2">
 				<tr>
 					<th>Player</th>
 					<th>Hero</th>
@@ -184,8 +212,7 @@
 					<th></th>
 				</tr>
 			</thead>
-			<tbody id="playerTable-team2">
-			</tbody>
+			<tbody id="playerTable-team2"></tbody>
 		</table>
 	</div>
 </div>

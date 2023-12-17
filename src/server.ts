@@ -1,15 +1,86 @@
 import { ServerWebSocket } from "bun";
 import { createDTO, scrimCsvToObjArray } from "./parser";
+import { logger } from "./Logger";
+import { handleDataRequest } from "./datahandler";
+import { randomUUID } from "crypto";
 
 let CURRENT: {
 	fileName: string;
 	lines: string[];
+	matchUUID: string;
 } = {
 	fileName: "",
 	lines: [],
+	matchUUID: randomUUID(),
 };
 
-let LAST_DATA_SENT: any = {};
+export let LAST_DATA_SENT: any = {
+	default: true,
+};
+
+async function getMatchUUID(fileName?: string) {
+	if (!fileName) fileName = CURRENT.fileName;
+	const CurrentMatchID = fileName.replace("Log-", "").replace(".txt", "");
+
+	const matchesFile = Bun.file("./src/public/matchCache/matches.json");
+	const matchesFileJson = await matchesFile.json();
+	// check if any of the values are BetterMatchID
+	const matchUUIDs = Object.values(matchesFileJson);
+	const matchUUIDsKeys = Object.keys(matchesFileJson);
+	const matchUUIDIndex = matchUUIDs.indexOf(CurrentMatchID);
+	if (matchUUIDIndex != -1) {
+		// if so, return the key
+		logger.trace(
+			`Found matchUUID for ${fileName} - ${CurrentMatchID}`,
+			"[UUID]"
+		);
+		return matchUUIDsKeys[matchUUIDIndex];
+	}
+	return randomUUID().replace(/-/g, "");
+}
+
+async function saveMatch() {
+	const CurrentMatchID = CURRENT.fileName
+		.replace("Log-", "")
+		.replace(".txt", "");
+	// @ts-ignore
+
+	// save the current match to a file in /src/public/matchCache
+	// delete server_load if it exists from data
+	const LAST_DATA_SENT_NO_SERVER_LOAD = LAST_DATA_SENT;
+	delete LAST_DATA_SENT_NO_SERVER_LOAD.data.server_load;
+
+	const matchDataString = JSON.stringify(LAST_DATA_SENT_NO_SERVER_LOAD);
+	Bun.write(
+		`./src/public/matchCache/${CurrentMatchID}.json`,
+		matchDataString
+	);
+	logger.log(
+		`Match saved due to request from client`,
+		"[WS]",
+		CurrentMatchID
+	);
+
+	logger.info(`Saving Match ${CurrentMatchID}`, `[SAVE]`);
+	// generate a UUID and store the UUID against the filename in a matches.json file
+	// so we can find the match later
+	const matchesFile = Bun.file("./src/public/matchCache/matches.json");
+	const matchesFileJson = await matchesFile.json();
+
+	// check if any of the values are BetterMatchID
+	const matchUUIDs = Object.values(matchesFileJson);
+	const matchUUIDsKeys = Object.keys(matchesFileJson);
+	const matchUUIDIndex = matchUUIDs.indexOf(CurrentMatchID);
+	if (matchUUIDIndex != -1) {
+		// if so, delete the key
+		delete matchesFileJson[matchUUIDsKeys[matchUUIDIndex]];
+	}
+
+	matchesFileJson[LAST_DATA_SENT.parser_load.matchUUID] = CurrentMatchID;
+	const stringified = JSON.stringify(matchesFileJson);
+	Bun.write("./src/public/matchCache/matches.json", stringified);
+	return CurrentMatchID;
+}
 
 // Key WebSocket Map
 let GameClientWS: ServerWebSocket<any> | null = null;
@@ -34,16 +105,23 @@ const server = Bun.serve({
 		}
 		if (url.pathname.includes("/public/")) {
 			const fileName = url.pathname.split("/public/")[1];
-			return new Response(Bun.file("./src/public/" + fileName));
+			return new Response(
+				Bun.file("./src/public/" + fileName.replace(/%20/g, " "))
+			);
 		}
-		const header = Bun.file("./src/public/templates/head.html");
+
+		if (url.pathname.startsWith("/data")) {
+			return await handleDataRequest(req, server);
+		}
+
+		const header = Bun.file("./src/templates/head.html");
 		let headerText = await header.text();
 
-		const topbarTemplate = Bun.file("./src/public/templates/topbar.html");
+		const topbarTemplate = Bun.file("./src/templates/topbar.html");
 		const topbarText = await topbarTemplate.text();
 		headerText = headerText.replace("%TOPBAR%", topbarText);
 
-		const navbarTemplate = Bun.file("./src/public/templates/navbar.html");
+		const navbarTemplate = Bun.file("./src/templates/navbar.html");
 		const navbarText = await navbarTemplate.text();
 		headerText = headerText.replace("%NAVBAR%", navbarText);
 
@@ -114,13 +192,32 @@ const server = Bun.serve({
 			// remove the connection from the map
 			if (ws == GameClientWS) {
 				GameClientWS = null;
-				console.log(`GameClient disconnected`);
+				logger.log(`GameClient disconnected`, "[WS]");
 			}
 			if (ReceivingDataConnections.includes(ws)) {
 				ReceivingDataConnections = ReceivingDataConnections.filter(
 					(connection) => connection != ws
 				);
-				console.log(`Data connection disconnected`);
+				logger.log(`Data connection disconnected`, "[WS]");
+			}
+
+			if (!LAST_DATA_SENT.parser_load) {
+				LAST_DATA_SENT.parser_load = {
+					totalConnections: ReceivingDataConnections.length,
+					lineCount: 0,
+					fileName: "RESETTING",
+					ramUsage: process.memoryUsage().heapUsed,
+					cpuUsage: process.cpuUsage(),
+				};
+			}
+			LAST_DATA_SENT.parser_load.totalConnections =
+				ReceivingDataConnections.length;
+			LAST_DATA_SENT.parser_load.ramUsage =
+				process.memoryUsage().heapUsed;
+			LAST_DATA_SENT.parser_load.cpuUsage = process.cpuUsage();
+
+			for (const dataConnection of ReceivingDataConnections) {
+				dataConnection.send(JSON.stringify(LAST_DATA_SENT));
 			}
 		},
 		async message(ws, message: string) {
@@ -137,12 +234,23 @@ const server = Bun.serve({
 				ws.send(JSON.stringify({ type: "requestLog", data: CURRENT }));
 				return;
 			}
+			if (parsed.type == "saveMatch") {
+				const BetterMatchID = await saveMatch();
+
+				ws.send(
+					JSON.stringify({
+						type: "matchSaved",
+						matchID: BetterMatchID,
+						saved: true,
+					})
+				);
+			}
 			if (parsed.type == "init") {
 				// get the ip of the client
 				const ip = ws.remoteAddress;
 				if (parsed.id == "gameclient") {
 					GameClientWS = ws;
-					console.log(`Registered gameclient from IP`, ip);
+					logger.log(`Registered gameclient from IP`, "[WS]", ip);
 					// setup keepalive
 					if (KeepAliveInterval) {
 						clearInterval(KeepAliveInterval);
@@ -180,10 +288,15 @@ const server = Bun.serve({
 				}
 				if (parsed.id == "data") {
 					ReceivingDataConnections.push(ws);
-					console.log(`Registered data connection from IP`, ip);
+					logger.log(
+						`Registered data connection from IP`,
+						"[WS]",
+						ip
+					);
 				}
-				console.log(
+				logger.log(
 					`Total connections:`,
+					"[WS]",
 					ReceivingDataConnections.length
 				);
 				if (!LAST_DATA_SENT.parser_load) {
@@ -210,6 +323,7 @@ const server = Bun.serve({
 					CURRENT = {
 						fileName: "",
 						lines: [],
+						matchUUID: "FAKE MATCH UUID",
 					};
 					LAST_DATA_SENT = {
 						type: "data",
@@ -225,7 +339,7 @@ const server = Bun.serve({
 					for (const dataConnection of ReceivingDataConnections) {
 						dataConnection.send(JSON.stringify(LAST_DATA_SENT));
 					}
-					console.log(`RESET`);
+					logger.log(`RESET`, "[WS]");
 					return;
 				}
 				if (parsed.msg == "lines") {
@@ -235,10 +349,11 @@ const server = Bun.serve({
 					// if we already have a filename, confirm that theyre the same
 					if (CURRENT.fileName && CURRENT.fileName != fileName) {
 						// reset stuff if theyre not
-						console.log(`RESET FOR NEW FILE`);
+						logger.log(`RESET FOR NEW FILE`, "[WS]");
 						CURRENT = {
-							fileName: "",
+							fileName,
 							lines: [],
+							matchUUID: await getMatchUUID(fileName),
 						};
 					}
 
@@ -254,6 +369,7 @@ const server = Bun.serve({
 					// append matchLines to CURRENT.lines
 					CURRENT = {
 						fileName,
+						matchUUID: await getMatchUUID(fileName),
 						lines: [...CURRENT.lines, ...matchLines],
 					};
 					// check that CURRENT.lines.length == lineCount
@@ -265,8 +381,9 @@ const server = Bun.serve({
 						);
 						return;
 					}
-					console.log(
+					logger.log(
 						`Saved ${lineCount} lines for ${fileName}`,
+						"[WS]",
 						CURRENT.lines.length,
 						totalLineCount,
 						// most recent line
@@ -275,8 +392,12 @@ const server = Bun.serve({
 					const startTime = Date.now();
 					const parsedObj = scrimCsvToObjArray(CURRENT.lines);
 					const DTO = createDTO(parsedObj);
+
 					const timeToParse = Date.now() - startTime;
 					// send to all data connections
+					const doSave =
+						DTO["round_status"] == "match_end" &&
+						LAST_DATA_SENT.data["round_status"] != "match_end";
 					LAST_DATA_SENT = {
 						type: "data",
 						data: DTO,
@@ -284,11 +405,33 @@ const server = Bun.serve({
 							totalConnections: ReceivingDataConnections.length,
 							lineCount: CURRENT.lines.length,
 							fileName: CURRENT.fileName,
+							matchUUID: CURRENT.matchUUID,
 							parseTime: timeToParse,
 							ramUsage: process.memoryUsage().heapUsed,
 							cpuUsage: process.cpuUsage(),
 						},
 					};
+
+					// check if DTO["round_status"] = "match_end"
+					if (doSave) {
+						const BetterMatchID = await saveMatch();
+
+						logger.log(
+							`AUTOMATICALLY SAVED MATCH, FOUND MATCH_END`,
+							"[WS]",
+							BetterMatchID
+						);
+
+						for (const dataConnection of ReceivingDataConnections) {
+							dataConnection.send(
+								JSON.stringify({
+									type: "matchEnd",
+									matchID: BetterMatchID,
+									saved: true,
+								})
+							);
+						}
+					}
 
 					for (const dataConnection of ReceivingDataConnections) {
 						dataConnection.send(JSON.stringify(LAST_DATA_SENT));
@@ -301,4 +444,4 @@ const server = Bun.serve({
 	},
 });
 
-console.log(`Server started on port ${server.port}`);
+logger.success(`Server started on port ${server.port}`, "[SERVER]");
