@@ -6,7 +6,7 @@ async function handleResponse(url: URL, path: string[], match: any) {
 	let playerDatas = Object.values(match.better_player_stats);
 
 	if (path[0] == "info") {
-		return new Response(JSON.stringify(matchInformation), {
+		return new Response(JSON.stringify([matchInformation]), {
 			headers: { "Content-Type": "application/json" },
 		});
 	}
@@ -33,6 +33,11 @@ async function handleResponse(url: URL, path: string[], match: any) {
 			return 0;
 		});
 		playerDatas = playerDatas.sort((a: any, b: any) => {
+			if (a.role == "support" && b.role != "support") return -1;
+			if (a.role != "support" && b.role == "support") return 1;
+			return 0;
+		});
+		playerDatas = playerDatas.sort((a: any, b: any) => {
 			if (a.role == "tank" && b.role != "tank") return -1;
 			if (a.role != "tank" && b.role == "tank") return 1;
 			return 0;
@@ -42,11 +47,6 @@ async function handleResponse(url: URL, path: string[], match: any) {
 			if (a.role != "dps" && b.role == "dps") return 1;
 			return 0;
 		});
-		playerDatas = playerDatas.sort((a: any, b: any) => {
-			if (a.role == "support" && b.role != "support") return -1;
-			if (a.role != "support" && b.role == "support") return 1;
-			return 0;
-		});
 
 		if (url.searchParams.has("team")) {
 			const isTeam1 = url.searchParams.get("team") == "1";
@@ -54,6 +54,15 @@ async function handleResponse(url: URL, path: string[], match: any) {
 			const teamPlayerDatas = playerDatas.filter(
 				(player: any) => player.team == team
 			);
+			// if there are less than 5 players on the team, add empty players
+			for (let i = teamPlayerDatas.length; i < 5; i++) {
+				teamPlayerDatas.push({
+					role: "",
+					team,
+					playerName: "",
+				});
+			}
+
 			return new Response(JSON.stringify(teamPlayerDatas), {
 				headers: { "Content-Type": "application/json" },
 			});
