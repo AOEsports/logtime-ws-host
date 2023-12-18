@@ -3,7 +3,7 @@ import { createDTO, scrimCsvToObjArray } from "./parser";
 import { logger } from "./Logger";
 import { handleDataRequest } from "./datahandler";
 import { randomUUID } from "crypto";
-import { port, certPath, keyPath, useTLS } from "./config.json";
+import { port, certPath, caPath, keyPath, useTLS } from "./config.json";
 
 let CURRENT: {
 	fileName: string;
@@ -105,6 +105,7 @@ const server = Bun.serve({
 		? {
 				key: Bun.file(keyPath),
 				cert: Bun.file(certPath),
+				ca: Bun.file(caPath),
 		  }
 		: undefined,
 	port: port,
