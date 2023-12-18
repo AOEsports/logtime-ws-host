@@ -3,6 +3,7 @@ import { createDTO, scrimCsvToObjArray } from "./parser";
 import { logger } from "./Logger";
 import { handleDataRequest } from "./datahandler";
 import { randomUUID } from "crypto";
+import { port, certPath, keyPath } from "./config.json";
 
 let CURRENT: {
 	fileName: string;
@@ -100,7 +101,11 @@ let KeepAlivePongTracker: Timer | null = null;
 let LastGCWSPongTime = Date.now();
 
 const server = Bun.serve({
-	development: true,
+	tls: {
+		key: Bun.file(keyPath),
+		cert: Bun.file(certPath),
+	},
+	port: port,
 	async fetch(req, server) {
 		const success = server.upgrade(req);
 		if (success) {
