@@ -461,4 +461,9 @@ const server = Bun.serve({
 	},
 });
 
-logger.success(`Server started on port ${server.port}`, "[SERVER]");
+logger.success(
+	`Server started on port ${server.port} ${
+		useTLS ? "with TLS" : "without TLS"
+	}`,
+	"[SERVER]"
+);
