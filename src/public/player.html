@@ -21,7 +21,7 @@
 	function loadPlayer(playerData, playerName, round) {
 		const playerTemplate = document.getElementById("playerTemplate");
 		const playerTable = document.getElementById("playerTable");
-		console.log(playerData, round)
+		console.log(playerData, round);
 		const keys = Object.keys(playerData);
 		for (const playerNameLoad of keys) {
 			if (playerNameLoad != playerName) continue;
@@ -40,8 +40,6 @@
 			}
 			// update the table
 
-
-
 			const player = playerFoundData[round];
 			const playerRow = playerTemplate.cloneNode(true);
 			playerRow.id = player.hero;
@@ -49,27 +47,34 @@
 			playerRow.setAttribute("data-isPlayer", true);
 			playerRow.style.display = "table-row";
 
-			const playerDataKeys = Object.keys(player);
-			for (const pdKey in playerDataKeys) {
-				// querySelector for the data-type, and update the stuff in it
-				const pdKeyString = playerDataKeys[pdKey];
-				const pdValue = player[pdKeyString];
+			const heroesPlayed = Object.values(player);
+			for (const heroPlayedId in heroesPlayed) {
+				const heroPlayed = heroesPlayed[heroPlayedId];
+				const heroDataKeys = Object.keys(heroPlayed);
+				console.log(heroDataKeys, heroPlayed);
+				for (const pdKeyId in heroDataKeys) {
+					const pdKeyString = heroDataKeys[pdKeyId];
+					// querySelector for the data-type, and update the stuff in it
+					const pdValue = heroPlayed[pdKeyString];
+					console.log(pdKeyString, pdValue)
 
-				try {
-					const parsedValue = parseData(pdKeyString, pdValue);
-					// check if pdValue can be parsed as a number
-					if (!isNaN(parsedValue)) {
-						// if it can, round it
+					try {
+						const parsedValue = parseData(pdKeyString, pdValue);
+						// check if pdValue can be parsed as a number
+						if (!isNaN(parsedValue)) {
+							// if it can, round it
+							playerRow.querySelector(
+								`[data-type=${pdKeyString}]`
+							).innerHTML = Math.round(parsedValue);
+							continue;
+						}
 						playerRow.querySelector(
 							`[data-type=${pdKeyString}]`
-						).innerHTML = Math.round(parsedValue);
-						continue;
-					}
-					playerRow.querySelector(
-						`[data-type=${pdKeyString}]`
-					).innerHTML = parsedValue;
-				} catch (e) {}
+						).innerHTML = parsedValue;
+					} catch (e) {}
+				}
 			}
+
 			const oldRow = document.getElementById(player.hero);
 			if (oldRow) {
 				smoothReplace(oldRow, playerRow);
@@ -83,7 +88,9 @@
 		// get search params
 		const urlParams = new URLSearchParams(window.location.search);
 		const playerName = urlParams.get("player");
-		let round = urlParams.has("round") ? parseInt(urlParams.get("round")) : 1;
+		let round = urlParams.has("round")
+			? parseInt(urlParams.get("round"))
+			: 1;
 		if (round < 1) round = 1;
 
 		$('[data-type="playerName"]').text(playerName).text();
@@ -100,7 +107,7 @@
 		}
 		loadPlayer(data.player_stats, playerName, round);
 	}
-	
+
 	function updateRound(e) {
 		// select object onchange. find the new value
 		const round = e.value;
@@ -109,11 +116,8 @@
 		urlParams.set("round", round);
 		// reload the page
 		window.location.search = urlParams.toString();
-
-		
 	}
-	showTab('playerinfo')
-
+	showTab("playerinfo");
 </script>
 <div class="mui-tabs__pane mui--is-active" id="ow-players-info">
 	<div class="playerTitle">
@@ -139,37 +143,24 @@
 					<th title="Damage Dealt">Dmg.D</th>
 					<th title="Damage Received">Dmg.R</th>
 					<th title="Healing Done">Heal.D</th>
-					<th title="Healing Received">Heal.R</th>
+					<th title="Heal done to Self">Heal.S</th>
 					<th title="Ult Count">Ult.C</th>
 				</tr>
 			</thead>
 			<tbody id="playerTable">
 				<tr id="playerTemplate" style="display: none">
 					<td data-type="hero">
-						<image
-							width="32px"
-							src="/public/imgs/Tracer.png"
-						/>
+						<image width="32px" src="/public/imgs/Tracer.png" />
 					</td>
 					<td data-type="final_blows" title="Final Blows">0</td>
 					<td data-type="eliminations">0</td>
 					<td data-type="deaths">0</td>
-					<td title="Damage Dealt" data-type="damageDealt">
+					<td title="Damage Dealt" data-type="hero_damage">0</td>
+					<td title="Damage Received" data-type="damage_taken">
 						0
 					</td>
-					<td
-						title="Damage Received"
-						data-type="damageReceived"
-					>
-						0
-					</td>
-					<td title="Healing Done" data-type="healingGiven">
-						0
-					</td>
-					<td
-						title="Healing Received"
-						data-type="healingReceived"
-					>
+					<td title="Healing Done" data-type="healing_dealt">0</td>
+					<td title="Healing Received" data-type="self_healing">
 						0
 					</td>
 					<td title="Ult Count" data-type="ultsUsed">0</td>
