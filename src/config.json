@@ -1,5 +1,6 @@
 {
 	"port": 3000,
+	"useTLS": false,
 	"certPath": "/etc/letsencrypt/live/yourdomain.com/fullchain.pem",
 	"keyPath": "/etc/letsencrypt/live/yourdomain.com/privkey.pem"
 }
