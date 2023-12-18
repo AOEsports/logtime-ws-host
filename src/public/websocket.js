@@ -1,4 +1,5 @@
 let WebSockerServer = null;
+let Reconnecting = false;
 
 function requestLog() {
 	WebSockerServer.send(
@@ -18,6 +19,7 @@ function connectToWebSocket() {
 	);
 	WebSockerServer.onopen = function (event) {
 		console.log("Connected to websocket server");
+		toastr.success("Connected to WebSocket Server");
 		// send a message to the server
 		WebSockerServer.send(
 			JSON.stringify({
@@ -25,6 +27,7 @@ function connectToWebSocket() {
 				id: "data",
 			})
 		);
+		Reconnecting = false;
 	};
 	WebSockerServer.onclose = function (event) {
 		console.log("Disconnected from websocket server");
@@ -32,6 +35,9 @@ function connectToWebSocket() {
 		for (let i = 0; i < dataTargets.length; i++) {
 			dataTargets[i].innerHTML = "Lost Connection";
 		}
+		if (Reconnecting) return;
+		Reconnecting = true;
+		toastr.error("Lost connection to websocket server");
 		// attempt to reconnect every second for the next minute
 		let attempts = 0;
 		const interval = setInterval(() => {
@@ -83,7 +89,6 @@ function connectToWebSocket() {
 				}
 				return;
 			}
-			console.log(parsedData.data.better_player_stats);
 			if (
 				parsedData.data.server_load &&
 				parsedData.data.server_load.average &&

@@ -18,7 +18,17 @@ export let LAST_DATA_SENT: any = {
 	default: true,
 };
 
-async function getMatchUUID(fileName?: string) {
+export async function getMatchForUUID(matchUUID: string) {
+	// read the matches.json file and find the match with the id
+	const matches = Bun.file("./src/public/matchCache/matches.json");
+	const matchesJson = await matches.json();
+	const matchId = matchesJson[matchUUID];
+	const matchFile = Bun.file(`./src/public/matchCache/${matchId}.json`);
+	const matchFileJson = await matchFile.json();
+	return matchFileJson;
+}
+
+export async function getMatchUUID(fileName?: string) {
 	if (!fileName) fileName = CURRENT.fileName;
 	const CurrentMatchID = fileName.replace("Log-", "").replace(".txt", "");
 
@@ -390,8 +400,8 @@ const server = Bun.serve({
 						CURRENT.lines[CURRENT.lines.length - 1]
 					);
 					const startTime = Date.now();
-					const parsedObj = scrimCsvToObjArray(CURRENT.lines);
-					const DTO = createDTO(parsedObj);
+					const parsedObj = scrimCsvToObjArray(matchLines);
+					const DTO = createDTO(parsedObj, LAST_DATA_SENT.data);
 
 					const timeToParse = Date.now() - startTime;
 					// send to all data connections

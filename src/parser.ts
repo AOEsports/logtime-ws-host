@@ -1,4 +1,19 @@
+import { logger } from "./Logger";
+import { tank, damage, support } from "./public/heroes.json";
+
+function fixHeroName(heroName) {
+	if (heroName == "") return "TrainingBot";
+	if (heroName == "Junker Queen") return "Junkerqueen";
+	if (heroName == "Soldier: 76") return "Soldier76";
+	if (heroName == "D.Va") return "DVa";
+	if (heroName == "Torbjörn") return "Torbjorn";
+	if (heroName == "Lúcio") return "Lucio";
+	if (heroName == "Wrecking Ball") return "WreckingBall";
+	return heroName;
+}
+
 const OW_EVENT_KEYS = {
+	INIT_PLAYER: "init_player",
 	ROUND_START: "round_start",
 	ROUND_END: "round_end",
 	HERO_SPAWN: "hero_spawn",
@@ -31,6 +46,17 @@ export const scrimCsvToObjArray = (rows: string[], delimiter = ",") => {
 			const values = row.replace("\\n", "").split(delimiter);
 
 			const key = values[1];
+
+			if (key === OW_EVENT_KEYS.INIT_PLAYER) {
+				const el = {
+					[key]: {
+						playerName: values[2],
+						team: values[3],
+					},
+				};
+
+				return el;
+			}
 			if (key === OW_EVENT_KEYS.SERVER_LOAD) {
 				const el = {
 					[key]: {
@@ -102,6 +128,7 @@ export const scrimCsvToObjArray = (rows: string[], delimiter = ",") => {
 							hero: values[8],
 							playerName: values[7],
 						},
+						cause: values[9],
 						amount: parseFloat(values[10]),
 						playerFullHeroDamage: parseFloat(values[11]),
 						playerFullShieldDamage: parseFloat(values[12]),
@@ -248,17 +275,19 @@ export const scrimCsvToObjArray = (rows: string[], delimiter = ",") => {
 						playerName: values[3],
 						hero: values[5],
 						team: values[4],
-						hero_damage: parseFloat(values[6]),
-						barrier_damage: parseFloat(values[7]),
-						damage_mitigated: parseFloat(values[8]),
-						damage_received: parseFloat(values[9]),
+						hero_damage: Math.floor(parseFloat(values[6])),
+						barrier_damage: Math.floor(parseFloat(values[7])),
+						damage_mitigated: Math.floor(parseFloat(values[8])),
+						damage_received: Math.floor(parseFloat(values[9])),
 						final_blows: parseFloat(values[10]),
 						eliminations: parseFloat(values[11]),
 						deaths: parseFloat(values[12]),
-						healing_dealt: parseFloat(values[13]),
+						healing_dealt: Math.floor(parseFloat(values[13])),
 						ults_used: parseFloat(values[14]),
 						ult_percentage: parseFloat(values[15]),
-						weapon_accuracy: parseFloat(values[16]),
+						weapon_accuracy: Math.floor(
+							parseFloat(values[16]) * 100
+						),
 						solo_kills: parseFloat(values[17]),
 						is_alive: values[18] == "True",
 					},
@@ -324,17 +353,40 @@ export const scrimCsvToObjArray = (rows: string[], delimiter = ",") => {
 	return arr;
 };
 
-export const createDTO = (events: any) => {
+export function createDTO(events: any, existingDTO?: any) {
 	let MAP: string = "";
 	let MODE: string = "";
 	let TEAM_1: string = "";
 	let TEAM_2: string = "";
-	const PLAYER_STATS = {};
-	const PLAYERS = {};
-	const BETTER_PLAYER_STATS = {};
-	const DTO = {};
+	const PLAYER_STATS =
+		existingDTO && existingDTO["player_stats"]
+			? existingDTO["player_stats"]
+			: {};
+	const PLAYERS =
+		existingDTO && existingDTO["players"] ? existingDTO["players"] : {};
+	const BETTER_PLAYER_STATS =
+		existingDTO && existingDTO["better_player_stats"]
+			? existingDTO["better_player_stats"]
+			: {};
+	const DTO = existingDTO ?? {};
 
 	for (const event of events) {
+		if (event[OW_EVENT_KEYS.INIT_PLAYER]) {
+			PLAYERS[event?.[OW_EVENT_KEYS.INIT_PLAYER]?.playerName] = {
+				playerName: event?.[OW_EVENT_KEYS.INIT_PLAYER]?.playerName,
+				team: event?.[OW_EVENT_KEYS.INIT_PLAYER]?.team,
+				damageReceived: 0,
+				damageDealt: 0,
+				healingDone: 0,
+				healingReceived: 0,
+				ultsUsed: 0,
+				ultPercentage: 0,
+				deaths: 0,
+				eliminations: 0,
+				kills: 0,
+				hero: "TrainingBot",
+			};
+		}
 		if (event[OW_EVENT_KEYS.SERVER_LOAD]) {
 			DTO["server_load"] = event[OW_EVENT_KEYS.SERVER_LOAD];
 		}
@@ -347,185 +399,99 @@ export const createDTO = (events: any) => {
 		}
 
 		if (event[OW_EVENT_KEYS.HERO_SPAWN]) {
-			if (event?.[OW_EVENT_KEYS.HERO_SPAWN]?.player?.playerName) {
-				PLAYERS[event?.[OW_EVENT_KEYS.HERO_SPAWN]?.player?.playerName] =
-					{
-						...(PLAYERS?.[
-							event?.[OW_EVENT_KEYS.HERO_SPAWN]?.player
-								?.playerName
-						] || {}),
-						...event[OW_EVENT_KEYS.HERO_SPAWN].player,
-					};
-				PLAYERS[
-					event?.[OW_EVENT_KEYS.HERO_SPAWN]?.player?.playerName
-				].team = event?.[OW_EVENT_KEYS.HERO_SPAWN]?.team;
+			const playerName =
+				event?.[OW_EVENT_KEYS.HERO_SPAWN]?.player.playerName;
+			if (!PLAYERS[playerName]) {
+				PLAYERS[playerName] = {
+					playerName: playerName,
+					team: event?.[OW_EVENT_KEYS.HERO_SPAWN]?.team,
+					damageReceived: 0,
+					damageDealt: 0,
+					healingDone: 0,
+					healingReceived: 0,
+					ultsUsed: 0,
+					ultPercentage: 0,
+					deaths: 0,
+					eliminations: 0,
+					kills: 0,
+					hero: "TrainingBot",
+					role: "flex",
+				};
+			}
 
-				DTO["players"] = { ...PLAYERS };
+			PLAYERS[playerName].hero =
+				event?.[OW_EVENT_KEYS.HERO_SPAWN]?.player.hero;
+
+			if (tank.includes(PLAYERS[playerName].hero)) {
+				PLAYERS[playerName].role = "tank";
+			}
+			if (damage.includes(PLAYERS[playerName].hero)) {
+				PLAYERS[playerName].role = "dps";
+			}
+			if (support.includes(PLAYERS[playerName].hero)) {
+				PLAYERS[playerName].role = "support";
 			}
 		}
 
 		if (event[OW_EVENT_KEYS.HERO_SWAP]) {
-			if (event?.[OW_EVENT_KEYS.HERO_SWAP]?.player?.playerName) {
-				PLAYERS[event?.[OW_EVENT_KEYS.HERO_SWAP]?.player?.playerName] =
-					{
-						...PLAYERS[
-							event?.[OW_EVENT_KEYS.HERO_SWAP]?.player?.playerName
-						],
-						...event[OW_EVENT_KEYS.HERO_SWAP].player,
-						ultimate_status: null,
-					};
+			const playerName =
+				event?.[OW_EVENT_KEYS.HERO_SWAP]?.player.playerName;
 
-				DTO["players"] = { ...PLAYERS };
+			PLAYERS[playerName].hero =
+				event?.[OW_EVENT_KEYS.HERO_SWAP]?.player.hero;
+
+			if (tank.includes(PLAYERS[playerName].hero)) {
+				PLAYERS[playerName].role = "tank";
+			}
+			if (damage.includes(PLAYERS[playerName].hero)) {
+				PLAYERS[playerName].role = "dps";
+			}
+			if (support.includes(PLAYERS[playerName].hero)) {
+				PLAYERS[playerName].role = "support";
 			}
 		}
 
 		if (event[OW_EVENT_KEYS.ELIMINATION]) {
-			if (event?.[OW_EVENT_KEYS.ELIMINATION]?.player?.playerName) {
-				if (
-					PLAYERS[
-						event?.[OW_EVENT_KEYS.ELIMINATION]?.player?.playerName
-					]
-				) {
-					if (
-						PLAYERS[
-							event?.[OW_EVENT_KEYS.ELIMINATION]?.player
-								?.playerName
-						].eliminations
-					) {
-						PLAYERS[
-							event?.[
-								OW_EVENT_KEYS.ELIMINATION
-							]?.player?.playerName
-						].eliminations += 1;
-					} else {
-						PLAYERS[
-							event?.[
-								OW_EVENT_KEYS.ELIMINATION
-							]?.player?.playerName
-						].eliminations = 1;
-					}
-
-					DTO["players"] = PLAYERS;
-				}
-			}
+			const playerName =
+				event?.[OW_EVENT_KEYS.ELIMINATION]?.player.playerName;
+			PLAYERS[playerName].eliminations += 1;
 		}
 
 		if (event[OW_EVENT_KEYS.KILL]) {
-			if (event?.[OW_EVENT_KEYS.KILL]?.player?.playerName) {
-				if (PLAYERS[event?.[OW_EVENT_KEYS.KILL]?.player?.playerName]) {
-					if (!event?.[OW_EVENT_KEYS.KILL]?.suicide) {
-						if (
-							PLAYERS[
-								event?.[OW_EVENT_KEYS.KILL]?.player?.playerName
-							].kills
-						) {
-							PLAYERS[
-								event?.[OW_EVENT_KEYS.KILL]?.player?.playerName
-							].kills += 1;
-						} else {
-							PLAYERS[
-								event?.[OW_EVENT_KEYS.KILL]?.player?.playerName
-							].kills = 1;
-						}
-					}
+			const playerName = event?.[OW_EVENT_KEYS.KILL]?.player.playerName;
+			if (!event?.[OW_EVENT_KEYS.KILL]?.suicide) {
+				PLAYERS[playerName].kills += 1;
+			}
 
-					// Log deaths of other player
-					if (
-						PLAYERS[
-							event?.[OW_EVENT_KEYS.KILL]?.receivingPlayer
-								?.playerName
-						]
-					) {
-						if (
-							PLAYERS[
-								event?.[OW_EVENT_KEYS.KILL]?.receivingPlayer
-									?.playerName
-							]?.deaths
-						) {
-							PLAYERS[
-								event?.[
-									OW_EVENT_KEYS.KILL
-								]?.receivingPlayer?.playerName
-							].deaths += 1;
-						} else {
-							PLAYERS[
-								event?.[
-									OW_EVENT_KEYS.KILL
-								]?.receivingPlayer?.playerName
-							].deaths = 1;
-						}
-					} else {
-						PLAYERS[
-							event?.[
-								OW_EVENT_KEYS.KILL
-							]?.receivingPlayer?.playerName
-						] = {
-							...event?.[OW_EVENT_KEYS.KILL]?.receivingPlayer,
-							deaths: 1,
-						};
-					}
+			if (event?.[OW_EVENT_KEYS.KILL]?.receivingPlayer) {
+				const victimName =
+					event?.[OW_EVENT_KEYS.KILL]?.receivingPlayer?.playerName;
 
-					DTO["players"] = PLAYERS;
-				}
+				PLAYERS[victimName].deaths += 1;
 			}
 		}
 
 		if (event[OW_EVENT_KEYS.DAMAGE]) {
-			if (event?.[OW_EVENT_KEYS.DAMAGE]?.player?.playerName) {
-				if (
-					PLAYERS[event?.[OW_EVENT_KEYS.DAMAGE]?.player?.playerName]
-				) {
-					PLAYERS[
-						event?.[OW_EVENT_KEYS.DAMAGE]?.player?.playerName
-					].playerFullHeroDamage =
-						event?.[OW_EVENT_KEYS.DAMAGE]?.playerFullHeroDamage;
+			const playerName =
+				event?.[OW_EVENT_KEYS.DAMAGE]?.player?.playerName;
 
-					PLAYERS[
-						event?.[OW_EVENT_KEYS.DAMAGE]?.player?.playerName
-					].playerFullShieldDamage =
-						event?.[OW_EVENT_KEYS.DAMAGE]?.playerFullShieldDamage;
+			const amount =
+				event?.[OW_EVENT_KEYS.DAMAGE]?.amount *
+				(event?.[OW_EVENT_KEYS.DAMAGE]?.isCritical ? 2 : 1);
 
-					// Log dmg received of other player
-					if (
-						PLAYERS[
-							event?.[OW_EVENT_KEYS.DAMAGE]?.receivingPlayer
-								?.playerName
-						]
-					) {
-						if (
-							PLAYERS[
-								event?.[OW_EVENT_KEYS.DAMAGE]?.receivingPlayer
-									?.playerName
-							]?.damageReceived
-						) {
-							PLAYERS[
-								event?.[
-									OW_EVENT_KEYS.DAMAGE
-								]?.receivingPlayer?.playerName
-							].damageReceived +=
-								event?.[OW_EVENT_KEYS.DAMAGE]?.amount;
-						} else {
-							PLAYERS[
-								event?.[
-									OW_EVENT_KEYS.DAMAGE
-								]?.receivingPlayer?.playerName
-							].damageReceived =
-								event?.[OW_EVENT_KEYS.DAMAGE]?.amount;
-						}
-					} else {
-						PLAYERS[
-							event?.[
-								OW_EVENT_KEYS.DAMAGE
-							]?.receivingPlayer?.playerName
-						] = {
-							...event?.[OW_EVENT_KEYS.DAMAGE]?.receivingPlayer,
-							damageReceived:
-								event?.[OW_EVENT_KEYS.DAMAGE]?.amount,
-						};
-					}
+			logger.info(
+				`${playerName} // ${
+					PLAYERS[playerName].damageDealt
+				} + ${amount} = ${PLAYERS[playerName].damageDealt + amount}`,
+				"[DMG]"
+			);
 
-					DTO["players"] = PLAYERS;
-				}
+			PLAYERS[playerName].damageDealt += amount;
+
+			if (event?.[OW_EVENT_KEYS.DAMAGE]?.receivingPlayer) {
+				const victimName =
+					event?.[OW_EVENT_KEYS.DAMAGE]?.receivingPlayer?.playerName;
+				PLAYERS[victimName].damageReceived += amount;
 			}
 		}
 
@@ -587,8 +553,6 @@ export const createDTO = (events: any) => {
 								event?.[OW_EVENT_KEYS.HEALING]?.amount,
 						};
 					}
-
-					DTO["players"] = PLAYERS;
 				}
 			}
 		}
@@ -619,8 +583,6 @@ export const createDTO = (events: any) => {
 							]?.player?.playerName
 						].off_assists = 1;
 					}
-
-					DTO["players"] = PLAYERS;
 				}
 			}
 		}
@@ -651,8 +613,6 @@ export const createDTO = (events: any) => {
 							]?.player?.playerName
 						].def_assists = 1;
 					}
-
-					DTO["players"] = PLAYERS;
 				}
 			}
 		}
@@ -667,7 +627,6 @@ export const createDTO = (events: any) => {
 					PLAYERS[
 						event?.[OW_EVENT_KEYS.ULT_CHARGED]?.player?.playerName
 					].ultimate_status = "charged";
-					DTO["players"] = PLAYERS;
 				}
 			}
 		}
@@ -697,8 +656,6 @@ export const createDTO = (events: any) => {
 						].ultsUsed = 1;
 					}
 				}
-
-				DTO["players"] = PLAYERS;
 			}
 		}
 
@@ -710,7 +667,6 @@ export const createDTO = (events: any) => {
 					PLAYERS[
 						event?.[OW_EVENT_KEYS.ULT_END]?.player?.playerName
 					].ultimate_status = "ended";
-					DTO["players"] = PLAYERS;
 				}
 			}
 		}
@@ -728,7 +684,6 @@ export const createDTO = (events: any) => {
 							OW_EVENT_KEYS.ECHO_DUPE_START
 						]?.player?.playerName
 					].ultimate_status = "started";
-					DTO["players"] = PLAYERS;
 				}
 			}
 		}
@@ -743,7 +698,6 @@ export const createDTO = (events: any) => {
 					PLAYERS[
 						event?.[OW_EVENT_KEYS.ECHO_DUPE_END]?.player?.playerName
 					].ultimate_status = "ended";
-					DTO["players"] = PLAYERS;
 				}
 			}
 		}
@@ -768,8 +722,28 @@ export const createDTO = (events: any) => {
 
 		if (event[OW_EVENT_KEYS.P_STATS_ALL]) {
 			const playerName = event?.[OW_EVENT_KEYS.P_STATS_ALL]?.playerName;
+			let lastHero = "TrainingBot";
+			if (
+				BETTER_PLAYER_STATS[playerName] &&
+				BETTER_PLAYER_STATS[playerName].hero
+			) {
+				lastHero = BETTER_PLAYER_STATS[playerName].hero;
+			}
 			BETTER_PLAYER_STATS[playerName] =
 				event?.[OW_EVENT_KEYS.P_STATS_ALL];
+
+			if (event?.[OW_EVENT_KEYS.P_STATS_ALL].hero == "") {
+				BETTER_PLAYER_STATS[playerName].hero = lastHero;
+			}
+			BETTER_PLAYER_STATS[playerName].role = PLAYERS[playerName].role;
+			BETTER_PLAYER_STATS[
+				playerName
+			].heroImage = `http://localhost:3000/public/imgs/${fixHeroName(
+				BETTER_PLAYER_STATS[playerName].hero
+			)}.png`;
+			BETTER_PLAYER_STATS[
+				playerName
+			].roleImage = `http://localhost:3000/public/imgs/${BETTER_PLAYER_STATS[playerName].role}.webp`;
 		}
 
 		if (event[OW_EVENT_KEYS.PLAYER_STAT]) {
@@ -778,12 +752,14 @@ export const createDTO = (events: any) => {
 				const roundNumber = parseInt(
 					event?.[OW_EVENT_KEYS.PLAYER_STAT]?.round
 				);
+				const hero = event?.[OW_EVENT_KEYS.PLAYER_STAT]?.hero;
 				if (!PLAYER_STATS[playerName]) PLAYER_STATS[playerName] = {};
+				if (!PLAYER_STATS[playerName][roundNumber])
+					PLAYER_STATS[playerName][roundNumber] = {};
 
-				PLAYER_STATS[playerName][roundNumber] = {
+				PLAYER_STATS[playerName][roundNumber][hero] = {
 					round: parseInt(event?.[OW_EVENT_KEYS.PLAYER_STAT]?.round),
 					hero: event?.[OW_EVENT_KEYS.PLAYER_STAT]?.hero,
-					heroList: [event?.[OW_EVENT_KEYS.PLAYER_STAT]?.hero],
 					eliminations: event?.[OW_EVENT_KEYS.PLAYER_STAT]
 						?.eliminations
 						? parseInt(
@@ -865,9 +841,10 @@ export const createDTO = (events: any) => {
 		}
 	}
 
+	DTO["players"] = PLAYERS;
 	DTO["player_stats"] = PLAYER_STATS;
 	DTO["better_player_stats"] = BETTER_PLAYER_STATS;
-	DTO["matchInformation"] = {
+	DTO["matchInformation"] = existingDTO["matchInformation"] ?? {
 		map: MAP,
 		mode: MODE,
 		team_1: TEAM_1,
@@ -875,4 +852,4 @@ export const createDTO = (events: any) => {
 	};
 
 	return DTO;
-};
+}

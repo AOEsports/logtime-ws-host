@@ -1,4 +1,4 @@
-import { LAST_DATA_SENT } from "./server";
+import { LAST_DATA_SENT, getMatchForUUID } from "./server";
 
 export async function handleDataRequest(req, server) {
 	try {
@@ -9,9 +9,24 @@ export async function handleDataRequest(req, server) {
 			const matchId = url.pathname.split("/").slice(3)[0];
 			console.log(matchId);
 
-			return new Response(JSON.stringify({}), {
-				headers: { "Content-Type": "application/json" },
-			});
+			// read the matches.json file and find the match with the id
+			const match = await getMatchForUUID(matchId);
+			console.log(match);
+			const playerDatas = Object.values(match.data.better_player_stats);
+
+			if (url.searchParams.has("player")) {
+				const playerToFind = url.searchParams.get("player");
+				const playerData = playerDatas.find(
+					(player: any) => player.playerName == playerToFind
+				);
+				return new Response(JSON.stringify([playerData]), {
+					headers: { "Content-Type": "application/json" },
+				});
+			} else {
+				return new Response(JSON.stringify(playerDatas), {
+					headers: { "Content-Type": "application/json" },
+				});
+			}
 		}
 
 		if (url.pathname == "/data/live") {

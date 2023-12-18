@@ -18,12 +18,16 @@
 			return `<image width="32px" src="/public/imgs/${fixHeroName(
 				value
 			)}.png"/>`;
+		if (key == "role")
+			return `<image width="28px" src="/public/imgs/${
+				value
+			}.webp"/>`;
 		if (key == "is_alive") {
 			if (value == true) return "YES";
 			else return "NO";
 		}
 		if (key == "weapon_accuracy") {
-			return `${Math.round(parseFloat(value) * 100)}%`;
+			return `${value}%`;
 		}
 		return value;
 	}
@@ -31,6 +35,8 @@
 	function loadPlayers(playerData, team1, team2) {
 		const playerTemplate = document.getElementById("playerTemplate");
 		for (const player of Object.values(playerData)) {
+			if (player.playerName.startsWith("Entity "))
+				continue;
 			const playerRow = playerTemplate.cloneNode(true);
 			// determine if player is Team 1 or Team 2
 			let team = "team1";
@@ -105,6 +111,7 @@
 		const team2name = data.matchInformation.team_2;
 		$("#team1name").text(team1name);
 		$("#team2name").text(team2name);
+		console.log(data.better_player_stats)
 
 		loadPlayers(data.better_player_stats, team1name, team2name);
 		LastDataCache = data;
@@ -142,6 +149,7 @@
 		<table class="mui-table mui-table--bordered" id="team1">
 			<thead data-team="team1">
 				<tr>
+					<th></th>
 					<th>Player</th>
 					<th>Hero</th>
 					<th title="Final Blows">F.B</th>
@@ -161,6 +169,7 @@
 			</thead>
 			<tbody id="playerTable-team1">
 				<tr id="playerTemplate" style="display: none">
+					<td data-type="role">role</td>
 					<td data-type="playerName">LenaOxt0n</td>
 					<td data-type="hero">
 						<image width="32px" src="/public/imgs/Tracer.png" />
@@ -195,6 +204,7 @@
 		<table class="mui-table mui-table--bordered" id="team2">
 			<thead data-team="team2">
 				<tr>
+					<th></th>
 					<th>Player</th>
 					<th>Hero</th>
 					<th title="Final Blows">F.B</th>
