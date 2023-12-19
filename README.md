@@ -26,15 +26,19 @@ Out of the box, TLS support is disabled. To enable it, provide a valid cert, key
 
 ## Endpoints
 
-`/data/live/info` - provides the current live match information (map, type of map, team names)
-`/data/live/players` - provides the current live player stats
-`/data/live/players?team=[1|2]` - provides the current live player stats for either team 1 or 2.
-`/data/live/players?player=PlayerName` - provides the current live player stats for the specified player name.
+> `/data/live/info` - provides the current live match information (map, type of map, team names)
 
-**You can replace `live` with `historical/[MATCHID]` to access past matches**
-ie; `/data/live/info` becomes `/data/historical/[MATCHID]/info`. 
+> `/data/live/players` - provides the current live player stats
+
+> `/data/live/players?team=[1|2]` - provides the current live player stats for either team 1 or 2.
+
+> `/data/live/players?player=PlayerName` - provides the current live player stats for the specified player name.
+
+> **You can replace `live` with `historical/[MATCHID]` to access past matches**
+> ie; `/data/live/info` becomes `/data/historical/[MATCHID]/info`. 
 
 **Match IDs are stored in `/src/public/matchCache/matches.json`. It is the _key_**
+
 ```json
 {"b2249efc732e43f2bdf20bd4143d2098":"2023-12-16-12-20-55","9d8cb701a2f1474abab71afce5163de6":"2023-12-18-10-59-43","3ee0a18528ad485d9e8a4f759c6fccd4":"2023-12-18-11-36-47"}
 ```
