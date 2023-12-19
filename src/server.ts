@@ -214,6 +214,7 @@ const server = Bun.serve({
 		// this is called when a message is received
 		async open(ws) {
 			logger.info(`New connection`, "[WS]", ws);
+			ws.ping();
 		},
 		async close(ws) {
 			// remove the connection from the map
