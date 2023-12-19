@@ -212,7 +212,9 @@ const server = Bun.serve({
 	},
 	websocket: {
 		// this is called when a message is received
-		async open(ws) {},
+		async open(ws) {
+			logger.info(`New connection`, "[WS]", ws);
+		},
 		async close(ws) {
 			// remove the connection from the map
 			if (ws == GameClientWS) {
