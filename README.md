@@ -1,3 +1,5 @@
+https://github.com/AOEsports/logtime-ws-host/assets/1311244/cdabbb75-6e6a-4300-a91b-14be80baee0f
+
 # Host for Logtime WS
 
 ⚠ **Requires Bun** ⚠
@@ -37,3 +39,4 @@ ie; `/data/live/info` becomes `/data/historical/[MATCHID]/info`.
 {"b2249efc732e43f2bdf20bd4143d2098":"2023-12-16-12-20-55","9d8cb701a2f1474abab71afce5163de6":"2023-12-18-10-59-43","3ee0a18528ad485d9e8a4f759c6fccd4":"2023-12-18-11-36-47"}
 ```
 example: `/data/historical/3ee0a18528ad485d9e8a4f759c6fccd4/info`
+
