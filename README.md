@@ -6,7 +6,10 @@ https://github.com/AOEsports/logtime-ws-host/assets/1311244/cdabbb75-6e6a-4300-a
 
 For use in conjunction with [the client](https://github.com/AOEsports/logtime-ws-client).
 
-## Config
+## Help?
+The project is provided "as is". Users are expected to have some level to knowledge for NJS. Any breaking issues, open an issue!
+
+## Setup
 
 **Before running, copy the `config.json.template` to `config.json` and modify as needed**
 
@@ -23,6 +26,11 @@ For use in conjunction with [the client](https://github.com/AOEsports/logtime-ws
 
 Out of the box, TLS support is disabled. To enable it, provide a valid cert, key and chain path.
 
+**Starting**
+```
+bun install
+bun run start
+```
 
 ## Endpoints
 
