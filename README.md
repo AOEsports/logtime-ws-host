@@ -7,7 +7,7 @@ https://github.com/AOEsports/logtime-ws-host/assets/1311244/cdabbb75-6e6a-4300-a
 For use in conjunction with [the client](https://github.com/AOEsports/logtime-ws-client).
 
 ## Help?
-The project is provided "as is". Users are expected to have some level to knowledge for NJS. Any breaking issues, open an issue!
+The project is provided "as is". Users are expected to have some level to knowledge for NJS. Any breaking issues, open an issue, or join the [Discord for one of my bots and post to "logtime-support"](https://discord.gg/PmhFBntf8N)
 
 ## Setup
 
