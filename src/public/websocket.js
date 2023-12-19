@@ -15,7 +15,9 @@ function connectToWebSocket() {
 	}
 
 	WebSockerServer = new WebSocket(
-		`ws://${document.location.hostname}:${location.port}`
+		`${document.location.protocol == "https:" ? "wss" : "ws"}://${
+			document.location.hostname
+		}:${location.port}`
 	);
 	WebSockerServer.onopen = function (event) {
 		console.log("Connected to websocket server");
