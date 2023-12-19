@@ -3,7 +3,14 @@ import { createDTO, scrimCsvToObjArray } from "./parser";
 import { logger } from "./Logger";
 import { handleDataRequest } from "./datahandler";
 import { randomUUID } from "crypto";
-import { port, certPath, caPath, keyPath, useTLS } from "../config.json";
+import {
+	port,
+	certPath,
+	caPath,
+	keyPath,
+	useTLS,
+	hostname,
+} from "../config.json";
 
 let CURRENT: {
 	fileName: string;
@@ -109,6 +116,7 @@ const server = Bun.serve({
 		  }
 		: undefined,
 	port: port,
+	hostname: hostname,
 	async fetch(req, server) {
 		// get the search params from the url
 		const url = new URL(req.url);
