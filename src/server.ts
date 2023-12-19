@@ -110,13 +110,14 @@ const server = Bun.serve({
 		: undefined,
 	port: port,
 	async fetch(req, server) {
-		const success = server.upgrade(req);
-		if (success) {
-			return undefined;
-		}
-
 		// get the search params from the url
 		const url = new URL(req.url);
+		if (url.pathname == "/socket") {
+			const success = server.upgrade(req);
+			if (success) {
+				return undefined;
+			}
+		}
 
 		if (url.pathname == "/favicon.png") {
 			return new Response(Bun.file("./src/public/imgs/favicon.png"));
