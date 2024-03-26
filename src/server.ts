@@ -213,7 +213,7 @@ const server = Bun.serve({
 	websocket: {
 		// this is called when a message is received
 		async open(ws) {
-			logger.info(`New connection`, "[WS]", ws);
+			logger.info(`New connection`, "[WS]");
 			ws.send(JSON.stringify({ type: "ping" }));
 		},
 		async close(ws) {

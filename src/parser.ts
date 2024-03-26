@@ -1,5 +1,5 @@
 import { logger } from "./Logger";
-import { tank, damage, support } from "./public/heroes.json";
+import { damage, support, tank } from "./public/heroes.json";
 
 function fixHeroName(heroName) {
 	if (heroName == "") return "TrainingBot";
@@ -738,12 +738,12 @@ export function createDTO(events: any, existingDTO?: any) {
 			BETTER_PLAYER_STATS[playerName].role = PLAYERS[playerName].role;
 			BETTER_PLAYER_STATS[
 				playerName
-			].heroImage = `http://localhost:3000/public/imgs/${fixHeroName(
+			].heroImage = `/public/imgs/${fixHeroName(
 				BETTER_PLAYER_STATS[playerName].hero
 			)}.png`;
 			BETTER_PLAYER_STATS[
 				playerName
-			].roleImage = `http://localhost:3000/public/imgs/${BETTER_PLAYER_STATS[playerName].role}.webp`;
+			].roleImage = `/public/imgs/${BETTER_PLAYER_STATS[playerName].role}.webp`;
 		}
 
 		if (event[OW_EVENT_KEYS.PLAYER_STAT]) {
