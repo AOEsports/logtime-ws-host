@@ -1,0 +1,157 @@
+#parent {
+	max-width: 1920px;
+	max-height: 1080px;
+	overflow: hidden;
+	margin-left: 400px;
+	margin-right: 400px;
+	margin-top: 200px;
+	background-color: transparent;
+	border-radius: 20px;
+	padding: 16px;
+	padding-bottom: 4px;
+	font-family: "Config";
+	text-transform: uppercase;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+.mui-table > thead[data-team="team1"] > tr > th {
+	border-bottom: 0px !important;
+	border-top: 0px !important;
+}
+
+.mui-table > thead[data-team="team2"] > tr > th {
+	border-bottom: 0px !important;
+	border-top: 0px !important;
+}
+
+tbody#playerTable-team2 > tr > td {
+	border-bottom: 0px !important;
+}
+
+tbody#playerTable-team1 > tr > td {
+	border-bottom: 0px !important;
+}
+
+tr[data-alive="false"] {
+	filter: grayscale(100%);
+}
+
+#team1name,
+#team2name {
+	font-size: 42px;
+	font-family: "BigNoodleTooOblique";
+	font-weight: 400;
+	color: black !important;
+	text-align: left !important;
+	padding-left: 32px !important;
+}
+
+td {
+	padding-top: 0px !important;
+	padding-bottom: 0px !important;
+	padding-left: 0px !important;
+	padding-right: 0px !important;
+}
+
+thead > tr {
+	background-color: #dadada !important;
+	color: #6f7176 !important;
+}
+
+thead > tr > th {
+	height: 32px !important;
+	padding-top: 0px !important;
+	padding-bottom: 0px !important;
+	padding-left: 0px !important;
+	padding-right: 0px !important;
+	font-size: 24px;
+	text-align: center !important;
+	color: #6f7176 !important;
+}
+
+tbody > tr {
+	color: white;
+	height: 48px !important;
+	padding-left: 0px !important;
+	padding-top: 0px !important;
+	padding-right: 0px !important;
+	padding-bottom: 1px !important;
+}
+
+tbody > tr > td {
+	font-size: 18px;
+	text-align: center !important;
+}
+
+td[data-type="playerName"] {
+	width: 240px;
+	/* margin-left: 16px !important; */
+	font-family: "BigNoodleTooOblique";
+	font-size: 2rem;
+	text-align: left !important;
+	font-weight: 300;
+	/* black border around text */
+	text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000,
+		1px 1px 0 #000;
+}
+
+td[data-type="ult_percentage"] {
+	width: 54px;
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+}
+
+td[data-type="role"] {
+	width: 24px;
+	padding: 0px !important;
+}
+
+td[data-type="hero"] {
+	width: 48px;
+	padding: 0px !important;
+}
+
+tbody#playerTable-team1 > tr > td[data-type="hero"] {
+	background-color: rgba(98, 204, 243, 1) !important;
+}
+
+tbody#playerTable-team2 > tr > td[data-type="hero"] {
+	background-color: rgba(235, 47, 81, 1) !important;
+}
+
+tbody#playerTable-team1 > tr > td[data-type="role"] {
+	background-color: rgba(98, 204, 243, 1) !important;
+}
+
+tbody#playerTable-team2 > tr > td[data-type="role"] {
+	background-color: rgba(235, 47, 81, 1) !important;
+}
+
+tbody#playerTable-team1 > tr {
+	background-color: rgba(98, 204, 243, 0.9) !important;
+	border-color: transparent;
+}
+
+tbody#playerTable-team2 > tr {
+	background-color: rgba(235, 47, 81, 0.9) !important;
+	border-color: transparent;
+}
+
+td[data-type="final_blows"],
+td[data-type="eliminations"],
+td[data-type="deaths"],
+td[data-type="ults_used"] {
+	width: 64px;
+	padding: 0px !important;
+}
+
+td[data-type="hero_damage"],
+td[data-type="damage_received"],
+td[data-type="healing_dealt"],
+td[data-type="damage_mitigated"] {
+	width: 128px;
+	padding: 0px !important;
+}

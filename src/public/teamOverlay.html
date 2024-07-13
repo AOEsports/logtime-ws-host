@@ -1,0 +1,259 @@
+<script>
+	let CurrentMatchID = "";
+	let LastDataCache = null;
+
+	function load() {
+		noToast();
+		connectToWebSocket();
+	}
+
+	function fixHeroName(heroName) {
+		if (heroName == "") return "TrainingBot";
+		if (heroName == "Junker Queen") return "Junkerqueen";
+		if (heroName == "Soldier: 76") return "Soldier76";
+		if (heroName == "D.Va") return "DVa";
+		if (heroName == "Torbjörn") return "Torbjorn";
+		if (heroName == "Lúcio") return "Lucio";
+		if (heroName == "Wrecking Ball") return "WreckingBall";
+		return heroName;
+	}
+
+	function parseData(key, value) {
+		if (key == "hero")
+			return `<image width="48px" src="/public/imgs/${fixHeroName(
+				value
+			)}.png"/>`;
+		if (key == "role")
+			return `<image width="28px" src="/public/imgs/${value}.webp"/>`;
+		if (key == "is_alive") {
+			if (value == true) return "YES";
+			else return "NO";
+		}
+		if (key == "weapon_accuracy") {
+			return `${value}%`;
+		}
+		if (key == "ult_percentage") {
+			return `${value}%`;
+		}
+		return value;
+	}
+
+	function loadPlayers(playerData, team1, team2) {
+		const playerTemplate = document.getElementById("playerTemplate");
+		for (const player of Object.values(playerData).sort((p1, p2) => {
+			// sort by role - "dps" first, then "tank" then "support"
+			if (p1.role == "dps") return -1;
+			if (p2.role == "dps") return 1;
+			if (p1.role == "tank") return -1;
+			if (p2.role == "tank") return 1;
+			if (p1.role == "support") return -1;
+			if (p2.role == "support") return 1;
+		})) {
+			if (player.playerName.startsWith("Entity ")) continue;
+			const playerRow = playerTemplate.cloneNode(true);
+			// determine if player is Team 1 or Team 2
+			let team = "team1";
+			if (player.team == team1) {
+				playerRow.setAttribute("data-team", "team1");
+				team = "team1";
+			} else if (player.team == team2) {
+				playerRow.setAttribute("data-team", "team2");
+				team = "team2";
+			}
+			playerRow.setAttribute("data-alive", player.is_alive);
+
+			const playerTable = document.getElementById(`playerTable-${team}`);
+
+			playerRow.id = player.playerName;
+			// set data-isPlayer to true
+			playerRow.setAttribute("data-isPlayer", true);
+			playerRow.style.display = "table-row";
+
+			const playerDataKeys = Object.keys(player);
+			for (const pdKey in playerDataKeys) {
+				// querySelector for the data-type, and update the stuff in it
+				const pdKeyString = playerDataKeys[pdKey];
+				const pdValue = player[pdKeyString];
+
+				try {
+					const parsedValue = parseData(pdKeyString, pdValue);
+					// check if pdValue can be parsed as a number
+					if (!playerRow.querySelector(`[data-type=${pdKeyString}]`))
+						continue;
+					if (!isNaN(parsedValue)) {
+						// if it can, round it
+						playerRow.querySelector(
+							`[data-type=${pdKeyString}]`
+						).innerHTML = Math.round(parsedValue);
+						continue;
+					}
+					playerRow.querySelector(
+						`[data-type=${pdKeyString}]`
+					).innerHTML = parsedValue;
+				} catch (e) {}
+			}
+
+			// find the old row and replace it
+			const oldRow = document.getElementById(player.playerName);
+			if (oldRow) {
+				smoothReplace(oldRow, playerRow);
+			} else playerTable.appendChild(playerRow);
+		}
+	}
+
+	function passData(parsedData) {
+		const data = parsedData.data;
+
+		const CurrentMatchId = parsedData.parser_load.fileName
+			.replace("Log-", "")
+			.replace(".txt", "");
+
+		if (CurrentMatchId != CurrentMatchID) {
+			CurrentMatchID = CurrentMatchId;
+			const playerTemplate = document.getElementById("playerTemplate");
+			document.getElementById("playerTable-team1").innerHTML = "";
+			document.getElementById("playerTable-team2").innerHTML = "";
+			document
+				.getElementById("playerTable-team1")
+				.appendChild(playerTemplate);
+		}
+		const team1name = data.matchInformation.team_1;
+		const team2name = data.matchInformation.team_2;
+		$("#team1name").text(team1name);
+		$("#team2name").text(team2name);
+		console.log(data.better_player_stats);
+
+		loadPlayers(data.better_player_stats, team1name, team2name);
+		LastDataCache = data;
+	}
+
+	function saveMatch() {
+		if (LastDataCache == null) {
+			toastr.error("No match data to download");
+			return;
+		}
+
+		// ask the websocket to save the match as it is
+		WebSockerServer.send(
+			JSON.stringify({
+				type: "saveMatch",
+			})
+		);
+		toastr.info("Request to save match has been sent.");
+	}
+</script>
+
+<head>
+	<title>Overwatch Stats - Viewer</title>
+	<link
+		href="//cdn.muicss.com/mui-0.10.3/extra/mui-rem.min.css"
+		rel="stylesheet"
+		type="text/css"
+	/>
+	<link
+		href="//cdn.muicss.com/mui-0.10.3/extra/mui-colors.min.css"
+		rel="stylesheet"
+		type="text/css"
+	/>
+
+	<script
+		src="//code.jquery.com/jquery-3.7.1.min.js"
+		integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+		crossorigin="anonymous"
+	></script>
+
+	<link rel="stylesheet" href="public/style.css" />
+	<link rel="stylesheet" href="public/overlay.css" />
+	<link rel="icon" type="image/png" href="/favicon.png" />
+	<script src="//cdn.muicss.com/mui-0.10.3/extra/mui-combined.min.js"></script>
+
+	<script src="//cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js"></script>
+
+	<script src="public/websocket.js"></script>
+	<script src="public/shared.js"></script>
+	<meta charset="utf-8" />
+	<script>
+		toastr.options = {
+			closeButton: false,
+			debug: false,
+			newestOnTop: false,
+			progressBar: false,
+			positionClass: "toast-bottom-right",
+			preventDuplicates: false,
+			onclick: null,
+			showDuration: "300",
+			hideDuration: "1000",
+			timeOut: "5000",
+			extendedTimeOut: "1000",
+			showEasing: "swing",
+			hideEasing: "linear",
+			showMethod: "fadeIn",
+			hideMethod: "fadeOut",
+		};
+	</script>
+</head>
+<body onload="load()" style="color-scheme: dark; background-color: transparent">
+	<div class="mui-container">
+		<div class="mui--text-body1" id="parent">
+			<table class="mui-table mui-table--bordered" id="team1">
+				<thead data-team="team1">
+					<tr>
+						<th id="team1name" colspan="3"></th>
+						<th>F</th>
+						<th>E</th>
+						<th>D</th>
+						<th>DMG</th>
+						<th>TAKEN</th>
+						<th>H</th>
+						<th>MIT</th>
+						<th>U</th>
+					</tr>
+				</thead>
+				<tbody id="playerTable-team1">
+					<tr id="playerTemplate" style="display: none">
+						<td data-type="role">
+							<image width="32px" src="/public/imgs/flex.webp" />
+						</td>
+						<td data-type="hero">
+							<image width="64px" src="/public/imgs/Tracer.png" />
+						</td>
+						<td data-type="playerName">LenaOxt0n</td>
+						<td data-type="final_blows" title="Final Blows">0</td>
+						<td data-type="eliminations">0</td>
+						<td data-type="deaths">0</td>
+						<td title="Damage Dealt" data-type="hero_damage">0</td>
+						<td title="Damage Received" data-type="damage_received">
+							0
+						</td>
+						<td title="Healing Done" data-type="healing_dealt">
+							0
+						</td>
+						<td
+							title="Damage Mitigated"
+							data-type="damage_mitigated"
+						>
+							0
+						</td>
+						<td title="Ult Count" data-type="ults_used">0</td>
+					</tr>
+				</tbody>
+			</table>
+			<table class="mui-table mui-table--bordered" id="team2">
+				<thead data-team="team2">
+					<tr>
+						<th id="team2name" colspan="3"></th>
+						<th>F</th>
+						<th>E</th>
+						<th>D</th>
+						<th>DMG</th>
+						<th>TAKEN</th>
+						<th>H</th>
+						<th>MIT</th>
+						<th>U</th>
+					</tr>
+				</thead>
+				<tbody id="playerTable-team2"></tbody>
+			</table>
+		</div>
+	</div>
+</body>

@@ -1,16 +1,16 @@
 import { ServerWebSocket } from "bun";
-import { createDTO, scrimCsvToObjArray } from "./parser";
-import { logger } from "./Logger";
-import { handleDataRequest } from "./datahandler";
 import { randomUUID } from "crypto";
 import {
-	port,
-	certPath,
 	caPath,
-	keyPath,
-	useTLS,
+	certPath,
 	hostname,
+	keyPath,
+	port,
+	useTLS,
 } from "../config.json";
+import { logger } from "./Logger";
+import { handleDataRequest } from "./datahandler";
+import { createDTO, scrimCsvToObjArray } from "./parser";
 
 let CURRENT: {
 	fileName: string;
@@ -149,6 +149,15 @@ const server = Bun.serve({
 		const navbarTemplate = Bun.file("./src/templates/navbar.html");
 		const navbarText = await navbarTemplate.text();
 		headerText = headerText.replace("%NAVBAR%", navbarText);
+
+		if (url.pathname == "/overlay/tab") {
+			const players = await Bun.file(
+				"./src/public/teamOverlay.html"
+			).text();
+			return new Response(players, {
+				headers: { "Content-Type": "text/html" },
+			});
+		}
 
 		if (url.pathname == "/player") {
 			const players = await Bun.file("./src/public/player.html").text();

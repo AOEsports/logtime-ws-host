@@ -1,6 +1,12 @@
 let WebSockerServer = null;
 let Reconnecting = false;
 
+let NO_TOASTER = false;
+
+function noToast() {
+	NO_TOASTER = true;
+}
+
 function requestLog() {
 	WebSockerServer.send(
 		JSON.stringify({
@@ -21,7 +27,7 @@ function connectToWebSocket() {
 	);
 	WebSockerServer.onopen = function (event) {
 		console.log("Connected to websocket server");
-		toastr.success("Connected to WebSocket Server");
+		if (!NO_TOASTER) toastr.success("Connected to WebSocket Server");
 		// send a message to the server
 		WebSockerServer.send(
 			JSON.stringify({
@@ -39,7 +45,7 @@ function connectToWebSocket() {
 		}
 		if (Reconnecting) return;
 		Reconnecting = true;
-		toastr.error("Lost connection to websocket server");
+		if (!NO_TOASTER) toastr.error("Lost connection to websocket server");
 		// attempt to reconnect every second for the next minute
 		let attempts = 0;
 		const interval = setInterval(() => {
@@ -60,11 +66,12 @@ function connectToWebSocket() {
 	WebSockerServer.onmessage = function (event) {
 		const parsedData = JSON.parse(event.data);
 		if (parsedData.type == "gameclientTimeout") {
-			toastr.error("GameClient timeout");
+			if (!NO_TOASTER) toastr.error("GameClient timeout");
 		}
 		if (parsedData.type == "matchEnd" && parsedData.saved) {
 			const matchID = parsedData.matchID;
-			toastr.success(`
+			if (!NO_TOASTER)
+				toastr.success(`
 				<div>Match has finished and marked as saved under ID ${matchID}</div>
 				<div><button>
 					<a href="/public/matchCache/${matchID}.json" target="_blank" download>Download File</a>
@@ -73,7 +80,8 @@ function connectToWebSocket() {
 		}
 		if (parsedData.type == "matchSaved") {
 			const matchID = parsedData.matchID;
-			toastr.success(`
+			if (!NO_TOASTER)
+				toastr.success(`
 				<div>Match has been saved and marked as saved under ID ${matchID}</div>
 				<div><button>
 					<a href="/public/matchCache/${matchID}.json" target="_blank" download>Download File</a>

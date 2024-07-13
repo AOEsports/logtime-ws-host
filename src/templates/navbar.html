@@ -1,6 +1,6 @@
 <script>
 	function setCurrentPage(pageId) {
-		console.log("setting current page", pageId)
+		console.log("setting current page", pageId);
 
 		// add the class to the li with the id
 		$("#" + pageId).addClass("mui--is-active");
@@ -13,16 +13,16 @@
 		// hide the page with the id
 		$("#" + pageId).hide();
 	}
-	setTimeout(()=>{		
-		setCurrentPage("%PAGE%")
-	}, 1)
+	setTimeout(() => {
+		setCurrentPage("%PAGE%");
+	}, 1);
 </script>
 
 <ul class="mui-tabs__bar">
 	<li id="home">
 		<a href="/" style="cursor: pointer"> Live </a>
 	</li>
-	<li id="playerinfo" style="display: none;">
+	<li id="playerinfo" style="display: none">
 		<a style="cursor: pointer"> Player Information </a>
 	</li>
 	<li id="matchinfo">
@@ -33,5 +33,8 @@
 	</li>
 	<li id="parserload">
 		<a style="cursor: pointer" href="/parserload"> Parser Server Load </a>
+	</li>
+	<li id="parserload">
+		<a style="cursor: pointer" href="/overlay/tab"> Tab Overlay </a>
 	</li>
 </ul>

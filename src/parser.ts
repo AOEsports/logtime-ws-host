@@ -733,6 +733,7 @@ export function createDTO(events: any, existingDTO?: any) {
 				event?.[OW_EVENT_KEYS.P_STATS_ALL];
 
 			if (event?.[OW_EVENT_KEYS.P_STATS_ALL].hero == "") {
+				console.log(BETTER_PLAYER_STATS[playerName]);
 				BETTER_PLAYER_STATS[playerName].hero = lastHero;
 			}
 			BETTER_PLAYER_STATS[playerName].role = PLAYERS[playerName].role;

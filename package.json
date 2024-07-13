@@ -10,7 +10,8 @@
 		"typescript": "^5.0.0"
 	},
 	"scripts": {
-		"start": "bun run src/server.ts"
+		"start": "bun run src/server.ts",
+		"dev": "bun run --hot src/server.ts"
 	},
 	"dependencies": {
 		"@elysiajs/static": "^0.7.1",
