@@ -19,9 +19,7 @@
 				value
 			)}.png"/>`;
 		if (key == "role")
-			return `<image width="28px" src="/public/imgs/${
-				value
-			}.webp"/>`;
+			return `<image width="28px" src="/public/imgs/${value}.webp"/>`;
 		if (key == "is_alive") {
 			if (value == true) return "YES";
 			else return "NO";
@@ -35,8 +33,7 @@
 	function loadPlayers(playerData, team1, team2) {
 		const playerTemplate = document.getElementById("playerTemplate");
 		for (const player of Object.values(playerData)) {
-			if (player.playerName.startsWith("Entity "))
-				continue;
+			if (player.playerName.startsWith("Entity ")) continue;
 			const playerRow = playerTemplate.cloneNode(true);
 			// determine if player is Team 1 or Team 2
 			let team = "team1";
@@ -111,7 +108,7 @@
 		const team2name = data.matchInformation.team_2;
 		$("#team1name").text(team1name);
 		$("#team2name").text(team2name);
-		console.log(data.better_player_stats)
+		console.log(data.better_player_stats);
 
 		loadPlayers(data.better_player_stats, team1name, team2name);
 		LastDataCache = data;
@@ -129,7 +126,7 @@
 				type: "saveMatch",
 			})
 		);
-		toastr.info("Request to save match has been sent.")
+		toastr.info("Request to save match has been sent.");
 	}
 </script>
 
@@ -170,7 +167,8 @@
 			<tbody id="playerTable-team1">
 				<tr id="playerTemplate" style="display: none">
 					<td data-type="role">
-						<image width="32px" src="/public/imgs/flex.webp" /></td>
+						<image width="32px" src="/public/imgs/flex.webp" />
+					</td>
 					<td data-type="playerName">LenaOxt0n</td>
 					<td data-type="hero">
 						<image width="32px" src="/public/imgs/Tracer.png" />
