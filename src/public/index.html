@@ -108,6 +108,11 @@
 		const team2name = data.matchInformation.team_2;
 		$("#team1name").text(team1name);
 		$("#team2name").text(team2name);
+
+		const team1logo = data.matchInformation.team_1_logo;
+		const team2logo = data.matchInformation.team_2_logo;
+		$("#team1logo").attr("src", team1logo);
+		$("#team2logo").attr("src", team2logo);
 		console.log(data.better_player_stats);
 
 		loadPlayers(data.better_player_stats, team1name, team2name);
@@ -141,8 +146,108 @@
 			Save Match
 		</button>
 	</div>
+	<div class="mui-row">
+		<form
+			id="uploadForm"
+			enctype="multipart/form-data"
+			style="
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				gap: 4px;
+			"
+		>
+			<input
+				type="file"
+				id="file"
+				name="file"
+				accept="image/*"
+				style="display: none"
+			/>
+			<button
+				type="button"
+				onclick="document.getElementById('file').click();"
+				class="mui-btn mui-btn--primary mui-btn--small"
+			>
+				Select Team Image
+			</button>
+			<div class="mui-radio">
+				<label>
+					<input type="radio" name="teamSelect" value="1" checked />
+					Team 1
+				</label>
+				<label>
+					<input type="radio" name="teamSelect" value="2" />
+					Team 2
+				</label>
+			</div>
+
+			<button
+				type="button"
+				onclick="uploadTeamImage()"
+				class="mui-btn mui-btn--accent mui-btn--small"
+			>
+				Upload
+			</button>
+		</form>
+		<script>
+			function uploadTeamImage() {
+				var formData = new FormData(
+					document.getElementById("uploadForm")
+				);
+				fetch("/upload", {
+					method: "POST",
+					body: formData,
+				})
+					.then((response) => response.json())
+					.then((data) => {
+						console.log("Success:", data);
+						toastr.success("Image uploaded successfully!");
+						// Send a followup request to /api/setlogo
+						return fetch("/api/setlogo", {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								team: formData.get("teamSelect"),
+								logoUrl: data.imageUrl, // Assuming the server returns the image URL
+							}),
+						});
+					})
+					.then((response) => response.json())
+					.then((data) => {
+						console.log("Logo set:", data);
+						toastr.success("Team logo updated successfully!");
+					})
+					.catch((error) => {
+						console.error("Error:", error);
+						toastr.error("Error uploading image!");
+					});
+			}
+		</script>
+	</div>
+
 	<div class="mui--text-body1">
-		<div class="mui--text-display1" id="team1name">Team 1</div>
+		<div>
+			<img
+				src="#"
+				id="team1logo"
+				style="
+					width: 48px;
+					height: 48px;
+					display: inline;
+					margin-right: 8px;
+				"
+			/>
+			<div
+				class="mui--text-display1"
+				id="team1name"
+				style="display: inline"
+			>
+				Team 1
+			</div>
+		</div>
 		<table class="mui-table mui-table--bordered" id="team1">
 			<thead data-team="team1">
 				<tr>
@@ -199,7 +304,25 @@
 				</tr>
 			</tbody>
 		</table>
-		<div class="mui--text-display1" id="team2name">Team 2</div>
+		<div>
+			<img
+				src="#"
+				id="team2logo"
+				style="
+					width: 48px;
+					height: 48px;
+					display: inline;
+					margin-right: 8px;
+				"
+			/>
+			<div
+				class="mui--text-display1"
+				id="team2name"
+				style="display: inline"
+			>
+				Team 2
+			</div>
+		</div>
 		<table class="mui-table mui-table--bordered" id="team2">
 			<thead data-team="team2">
 				<tr>

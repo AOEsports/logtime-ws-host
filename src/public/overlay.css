@@ -46,7 +46,10 @@ tr[data-alive="false"] {
 	font-weight: 400;
 	color: black !important;
 	text-align: left !important;
-	padding-left: 32px !important;
+	white-space: nowrap !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	max-width: 240px !important;
 }
 
 td {
@@ -114,30 +117,22 @@ td[data-type="hero"] {
 	padding: 0px !important;
 }
 
-tbody#playerTable-team1 > tr > td[data-type="hero"] {
-	background-color: rgba(98, 204, 243, 1) !important;
-}
-
-tbody#playerTable-team2 > tr > td[data-type="hero"] {
-	background-color: rgba(235, 47, 81, 1) !important;
-}
-
+tbody#playerTable-team1 > tr > td[data-type="hero"],
 tbody#playerTable-team1 > tr > td[data-type="role"] {
 	background-color: rgba(98, 204, 243, 1) !important;
 }
 
+tbody#playerTable-team2 > tr > td[data-type="hero"],
 tbody#playerTable-team2 > tr > td[data-type="role"] {
 	background-color: rgba(235, 47, 81, 1) !important;
 }
 
 tbody#playerTable-team1 > tr {
 	background-color: rgba(98, 204, 243, 0.9) !important;
-	border-color: transparent;
 }
 
 tbody#playerTable-team2 > tr {
 	background-color: rgba(235, 47, 81, 0.9) !important;
-	border-color: transparent;
 }
 
 td[data-type="final_blows"],
@@ -146,6 +141,7 @@ td[data-type="deaths"],
 td[data-type="ults_used"] {
 	width: 64px;
 	padding: 0px !important;
+	background-color: rgba(0, 0, 0, 0.3) !important;
 }
 
 td[data-type="hero_damage"],

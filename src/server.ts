@@ -135,20 +135,152 @@ const server = Bun.serve({
 			);
 		}
 
+		// is POST
+		if (url.pathname == "/upload" && req.method == "POST") {
+			// File is an image. Upload it to public/imgs/teams
+			const file = (await req.formData()).get("file");
+			console.log(file);
+			if (file instanceof File) {
+				const fileName = file.name;
+				const filePath = `./src/public/teamicons/${fileName}`;
+				await Bun.write(filePath, await file.arrayBuffer());
+				return new Response(
+					JSON.stringify({
+						success: true,
+						imageUrl: `/public/teamicons/${fileName}`,
+					}),
+					{
+						status: 200,
+					}
+				);
+			} else {
+				return new Response(
+					JSON.stringify({ success: false, error: "Invalid file" }),
+					{ status: 400 }
+				);
+			}
+		}
+		// is POST
+		if (url.pathname == "/api/setlogo" && req.method == "POST") {
+			// params are "team" and "logoUrl"
+			const params = (await req.json()) as {
+				team: "1" | "2";
+				logoUrl: string;
+			};
+			const team = params["team"];
+			const logoUrl = params["logoUrl"];
+			if (!LAST_DATA_SENT.data) {
+				return new Response(
+					JSON.stringify({ success: false, error: "No data" }),
+					{ status: 400 }
+				);
+			}
+			if (team == "1") {
+				LAST_DATA_SENT.data.matchInformation.team_1_logo = logoUrl;
+			} else if (team == "2") {
+				LAST_DATA_SENT.data.matchInformation.team_2_logo = logoUrl;
+			} else {
+				return new Response(
+					JSON.stringify({ success: false, error: "Invalid team" }),
+					{ status: 400 }
+				);
+			}
+			return new Response(JSON.stringify({ success: true }), {
+				status: 200,
+			});
+		}
+		// is POST
+		if (url.pathname == "/api/showplayer" && req.method == "POST") {
+			// params are "team" and "logoUrl"
+			const params = (await req.json()) as {
+				playerIndex: string;
+			};
+			const playerIndex = params["playerIndex"];
+			// check that playerindex in a number
+			if (!playerIndex.match(/^\d+$/)) {
+				return new Response(
+					JSON.stringify({
+						success: false,
+						error: "Invalid playerIndex",
+					}),
+					{ status: 400 }
+				);
+			}
+			// check that playerindex is in range
+			if (
+				parseInt(playerIndex) < 0 ||
+				parseInt(playerIndex) > LAST_DATA_SENT.data.players.length
+			) {
+				return new Response(
+					JSON.stringify({
+						success: false,
+						error: "Invalid playerIndex",
+					}),
+					{ status: 400 }
+				);
+			}
+			const match = LAST_DATA_SENT.data;
+			const { team_1, team_2 } = match.matchInformation;
+
+			let playerDatas = Object.values(match.better_player_stats);
+
+			playerDatas = playerDatas.sort((a: any, b: any) => {
+				if (a.role == "support" && b.role != "support") return -1;
+				if (a.role != "support" && b.role == "support") return 1;
+				return 0;
+			});
+			playerDatas = playerDatas.sort((a: any, b: any) => {
+				if (a.role == "tank" && b.role != "tank") return -1;
+				if (a.role != "tank" && b.role == "tank") return 1;
+				return 0;
+			});
+			playerDatas = playerDatas.sort((a: any, b: any) => {
+				if (a.role == "dps" && b.role != "dps") return -1;
+				if (a.role != "dps" && b.role == "dps") return 1;
+				return 0;
+			});
+			playerDatas = playerDatas.sort((a: any, b: any) => {
+				if (a.team == team_1 && b.team == team_2) return -1;
+				if (a.team == team_2 && b.team == team_1) return 1;
+				return 0;
+			});
+			const player = playerDatas[parseInt(playerIndex)] as any;
+			if (!player) {
+				return new Response(
+					JSON.stringify({
+						success: false,
+						error: "Invalid playerIndex",
+					}),
+					{ status: 400 }
+				);
+			}
+
+			// send the player name via the websocket
+			if (ReceivingDataConnections.length > 0) {
+				for (const connection of ReceivingDataConnections) {
+					connection.send(
+						JSON.stringify({
+							type: "showPlayer",
+							playerName: player.playerName,
+						})
+					);
+				}
+			}
+
+			return new Response(
+				JSON.stringify({
+					success: true,
+					playerName: player.playerName,
+				}),
+				{
+					status: 200,
+				}
+			);
+		}
+
 		if (url.pathname.startsWith("/data")) {
 			return await handleDataRequest(req, server);
 		}
-
-		const header = Bun.file("./src/templates/head.html");
-		let headerText = await header.text();
-
-		const topbarTemplate = Bun.file("./src/templates/topbar.html");
-		const topbarText = await topbarTemplate.text();
-		headerText = headerText.replace("%TOPBAR%", topbarText);
-
-		const navbarTemplate = Bun.file("./src/templates/navbar.html");
-		const navbarText = await navbarTemplate.text();
-		headerText = headerText.replace("%NAVBAR%", navbarText);
 
 		if (url.pathname == "/overlay/tab") {
 			const players = await Bun.file(
@@ -158,6 +290,27 @@ const server = Bun.serve({
 				headers: { "Content-Type": "text/html" },
 			});
 		}
+		if (url.pathname == "/overlay/player") {
+			const players = await Bun.file(
+				"./src/public/playerOverlay.html"
+			).text();
+			return new Response(players, {
+				headers: { "Content-Type": "text/html" },
+			});
+		}
+
+		const header = Bun.file("./src/templates/head.html");
+		const topbarTemplate = Bun.file("./src/templates/topbar.html");
+		const navbarTemplate = Bun.file("./src/templates/navbar.html");
+
+		let [headerText, topbarText, navbarText] = await Promise.all([
+			header.text(),
+			topbarTemplate.text(),
+			navbarTemplate.text(),
+		]);
+
+		headerText = headerText.replace("%TOPBAR%", topbarText);
+		headerText = headerText.replace("%NAVBAR%", navbarText);
 
 		if (url.pathname == "/player") {
 			const players = await Bun.file("./src/public/player.html").text();

@@ -1,6 +1,13 @@
 <script>
 	let CurrentMatchID = "";
 	let LastDataCache = null;
+	let ShownPlayer = "";
+
+	function showPlayer(playerName) {
+		console.log(playerName);
+		ShownPlayer = playerName;
+		updateDisplay();
+	}
 
 	function load() {
 		noToast();
@@ -20,11 +27,11 @@
 
 	function parseData(key, value) {
 		if (key == "hero")
-			return `<image width="48px" src="/public/imgs/${fixHeroName(
+			return `<image width="64px" src="/public/imgs/${fixHeroName(
 				value
 			)}.png"/>`;
 		if (key == "role")
-			return `<image width="28px" src="/public/imgs/roles/${value}.svg" style="padding-left: 2px; padding-right: 2px;"/>`;
+			return `<image width="58px" src="/public/imgs/roles/${value}.svg" style="padding: 4px;"/>`;
 		if (key == "is_alive") {
 			if (value == true) return "YES";
 			else return "NO";
@@ -36,6 +43,44 @@
 			return `${value}%`;
 		}
 		return value;
+	}
+
+	function updateDisplay() {
+		const players = Object.values(LastDataCache.better_player_stats);
+		const player = players.find((p) => p.playerName == ShownPlayer);
+
+		const team1name = LastDataCache.matchInformation.team_1;
+		const team2name = LastDataCache.matchInformation.team_2;
+
+		if (player == undefined) return;
+		const team = player.team == team1name ? "team1" : "team2";
+		console.log(player);
+		$("#playerBox").attr("data-player", ShownPlayer);
+		$("#playerBox").attr("data-team", team);
+
+		const playerDataKeys = Object.keys(player);
+
+		for (const pdKey in playerDataKeys) {
+			// querySelector for the data-type, and update the stuff in it
+			const pdKeyString = playerDataKeys[pdKey];
+			const pdValue = player[pdKeyString];
+
+			try {
+				const parsedValue = parseData(pdKeyString, pdValue);
+				// check if pdValue can be parsed as a number
+				if (!document.querySelector(`[data-type=${pdKeyString}]`))
+					continue;
+				if (!isNaN(parsedValue)) {
+					// if it can, round it
+					document.querySelector(
+						`[data-type=${pdKeyString}]`
+					).innerHTML = Math.round(parsedValue);
+					continue;
+				}
+				document.querySelector(`[data-type=${pdKeyString}]`).innerHTML =
+					parsedValue;
+			} catch (e) {}
+		}
 	}
 
 	function loadPlayers(playerData, team1, team2) {
@@ -108,27 +153,10 @@
 			.replace("Log-", "")
 			.replace(".txt", "");
 
-		if (CurrentMatchId != CurrentMatchID) {
-			CurrentMatchID = CurrentMatchId;
-			const playerTemplate = document.getElementById("playerTemplate");
-			document.getElementById("playerTable-team1").innerHTML = "";
-			document.getElementById("playerTable-team2").innerHTML = "";
-			document
-				.getElementById("playerTable-team1")
-				.appendChild(playerTemplate);
-		}
-		const team1name = data.matchInformation.team_1;
-		const team2name = data.matchInformation.team_2;
-		$("#team1name").text(team1name);
-		$("#team2name").text(team2name);
+		if (CurrentMatchId != CurrentMatchID) CurrentMatchID = CurrentMatchId;
 
-		const team1logo = data.matchInformation.team_1_logo;
-		const team2logo = data.matchInformation.team_2_logo;
-		$("#team1logo").attr("src", team1logo);
-		$("#team2logo").attr("src", team2logo);
-
-		loadPlayers(data.better_player_stats, team1name, team2name);
 		LastDataCache = data;
+		updateDisplay();
 	}
 
 	function saveMatch() {
@@ -167,7 +195,7 @@
 	></script>
 
 	<link rel="stylesheet" href="public/style.css" />
-	<link rel="stylesheet" href="public/overlay.css" />
+	<link rel="stylesheet" href="public/playerOverlay.css" />
 	<link rel="icon" type="image/png" href="/favicon.png" />
 	<script src="//cdn.muicss.com/mui-0.10.3/extra/mui-combined.min.js"></script>
 
@@ -177,101 +205,67 @@
 	<script src="public/shared.js"></script>
 	<meta charset="utf-8" />
 	<script>
-		toastr.options = {
-			closeButton: false,
-			debug: false,
-			newestOnTop: false,
-			progressBar: false,
-			positionClass: "toast-bottom-right",
-			preventDuplicates: false,
-			onclick: null,
-			showDuration: "300",
-			hideDuration: "1000",
-			timeOut: "5000",
-			extendedTimeOut: "1000",
-			showEasing: "swing",
-			hideEasing: "linear",
-			showMethod: "fadeIn",
-			hideMethod: "fadeOut",
-		};
+		toastr = null;
 	</script>
 </head>
 <body onload="load()" style="color-scheme: dark; background-color: transparent">
-	<div class="mui-container">
-		<div class="mui--text-body1" id="parent">
-			<table class="mui-table mui-table--bordered" id="team1">
-				<thead data-team="team1">
-					<tr>
-						<th colspan="2">
-							<img
-								src="#"
-								id="team1logo"
-								style="width: 52px; height: 52px"
-							/>
-						</th>
-						<th id="team1name"></th>
-						<th>F</th>
-						<th>E</th>
-						<th>D</th>
-						<th>DMG</th>
-						<th>TAKEN</th>
-						<th>H</th>
-						<th>MIT</th>
-						<th>U</th>
-					</tr>
-				</thead>
-				<tbody id="playerTable-team1">
-					<tr id="playerTemplate" style="display: none">
-						<td data-type="role">
-							<image width="32px" src="/public/imgs/flex.webp" />
-						</td>
-						<td data-type="hero">
-							<image width="64px" src="/public/imgs/Tracer.png" />
-						</td>
-						<td data-type="playerName">LenaOxt0n</td>
-						<td data-type="final_blows" title="Final Blows">0</td>
-						<td data-type="eliminations">0</td>
-						<td data-type="deaths">0</td>
-						<td title="Damage Dealt" data-type="hero_damage">0</td>
-						<td title="Damage Received" data-type="damage_received">
-							0
-						</td>
-						<td title="Healing Done" data-type="healing_dealt">
-							0
-						</td>
-						<td
-							title="Damage Mitigated"
-							data-type="damage_mitigated"
-						>
-							0
-						</td>
-						<td title="Ult Count" data-type="ults_used">0</td>
-					</tr>
-				</tbody>
-			</table>
-			<table class="mui-table mui-table--bordered" id="team2">
-				<thead data-team="team2">
-					<tr>
-						<th colspan="2">
-							<img
-								src="#"
-								id="team2logo"
-								style="width: 52px; height: 52px"
-							/>
-						</th>
-						<th id="team2name"></th>
-						<th>F</th>
-						<th>E</th>
-						<th>D</th>
-						<th>DMG</th>
-						<th>TAKEN</th>
-						<th>H</th>
-						<th>MIT</th>
-						<th>U</th>
-					</tr>
-				</thead>
-				<tbody id="playerTable-team2"></tbody>
-			</table>
+	<div id="playerParent">
+		<div class="playerBox" data-player="#" data-team="team1" id="playerBox">
+			<div class="topbar">
+				<div data-type="playerName">Player Name</div>
+				<div style="display: flex; flex-direction: row; gap: 50px">
+					<div data-type="role">
+						<image width="64px" src="/public/imgs/roles/dps.svg" />
+					</div>
+					<div data-type="hero">
+						<image width="64px" src="/public/imgs/Tracer.png" />
+					</div>
+				</div>
+			</div>
+			<div class="stats">
+				<table class="mui-table">
+					<thead>
+						<tr>
+							<th>F</th>
+							<th>E</th>
+							<th>D</th>
+							<th>DMG</th>
+							<th>TAKEN</th>
+							<th>H</th>
+							<th>MIT</th>
+							<th>U</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td data-type="final_blows" title="Final Blows">
+								0
+							</td>
+							<td data-type="eliminations">0</td>
+							<td data-type="deaths">0</td>
+							<td title="Damage Dealt" data-type="hero_damage">
+								0
+							</td>
+							<td
+								title="Damage Received"
+								data-type="damage_received"
+							>
+								0
+							</td>
+							<td title="Healing Done" data-type="healing_dealt">
+								0
+							</td>
+							<td
+								title="Damage Mitigated"
+								data-type="damage_mitigated"
+							>
+								0
+							</td>
+							<td title="Ult Count" data-type="ults_used">0</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
 		</div>
 	</div>
 </body>

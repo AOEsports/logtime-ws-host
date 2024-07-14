@@ -112,6 +112,11 @@ function connectToWebSocket() {
 			} catch (e) {}
 			passData(parsedData);
 		}
+		if (parsedData.type == "showPlayer") {
+			const playerName = parsedData.playerName;
+			console.log(parsedData);
+			showPlayer(playerName);
+		}
 		if (parsedData.type == "requestLog") {
 			loadLogs(parsedData.data.lines);
 		}

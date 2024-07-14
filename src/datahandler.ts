@@ -3,7 +3,6 @@ import { LAST_DATA_SENT, getMatchForUUID } from "./server";
 async function handleResponse(url: URL, path: string[], match: any) {
 	console.log(path);
 	const { matchInformation } = match;
-	let playerDatas = Object.values(match.better_player_stats);
 
 	if (path[0] == "info") {
 		return new Response(JSON.stringify([matchInformation]), {
@@ -11,6 +10,7 @@ async function handleResponse(url: URL, path: string[], match: any) {
 		});
 	}
 
+	let playerDatas = Object.values(match.better_player_stats);
 	if (path[0] == "players" || path.length == 0) {
 		const { team_1, team_2 } = matchInformation;
 		// remove any players that start with "Entity "
@@ -27,11 +27,7 @@ async function handleResponse(url: URL, path: string[], match: any) {
 			});
 		}
 		// sort players by team 1 and team 2. team 2 players should be last. sort players by tank, dps, support roles
-		playerDatas = playerDatas.sort((a: any, b: any) => {
-			if (a.team == team_1 && b.team == team_2) return -1;
-			if (a.team == team_2 && b.team == team_1) return 1;
-			return 0;
-		});
+
 		playerDatas = playerDatas.sort((a: any, b: any) => {
 			if (a.role == "support" && b.role != "support") return -1;
 			if (a.role != "support" && b.role == "support") return 1;
@@ -45,6 +41,11 @@ async function handleResponse(url: URL, path: string[], match: any) {
 		playerDatas = playerDatas.sort((a: any, b: any) => {
 			if (a.role == "dps" && b.role != "dps") return -1;
 			if (a.role != "dps" && b.role == "dps") return 1;
+			return 0;
+		});
+		playerDatas = playerDatas.sort((a: any, b: any) => {
+			if (a.team == team_1 && b.team == team_2) return -1;
+			if (a.team == team_2 && b.team == team_1) return 1;
 			return 0;
 		});
 
