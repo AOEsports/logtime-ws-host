@@ -736,7 +736,8 @@ export function createDTO(events: any, existingDTO?: any) {
 				console.log(BETTER_PLAYER_STATS[playerName]);
 				BETTER_PLAYER_STATS[playerName].hero = lastHero;
 			}
-			BETTER_PLAYER_STATS[playerName].role = PLAYERS[playerName].role;
+			BETTER_PLAYER_STATS[playerName].role =
+				PLAYERS[playerName].role ?? "dps";
 			BETTER_PLAYER_STATS[
 				playerName
 			].heroImage = `/public/imgs/${fixHeroName(
