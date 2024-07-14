@@ -177,23 +177,7 @@
 	<script src="public/shared.js"></script>
 	<meta charset="utf-8" />
 	<script>
-		toastr.options = {
-			closeButton: false,
-			debug: false,
-			newestOnTop: false,
-			progressBar: false,
-			positionClass: "toast-bottom-right",
-			preventDuplicates: false,
-			onclick: null,
-			showDuration: "300",
-			hideDuration: "1000",
-			timeOut: "5000",
-			extendedTimeOut: "1000",
-			showEasing: "swing",
-			hideEasing: "linear",
-			showMethod: "fadeIn",
-			hideMethod: "fadeOut",
-		};
+		toastr = null;
 	</script>
 </head>
 <body onload="load()" style="color-scheme: dark; background-color: transparent">
